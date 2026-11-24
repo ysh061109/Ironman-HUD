@@ -71,6 +71,7 @@ public final class HudState {
     public static double targetDist = 0;
     public static float targetHp = 0, targetMaxHp = 1;
     public static int targetId = -1;
+    public static LivingEntity targetEntity = null;
     public static int lockTicks = 0;
     public static int kills = 0;
     private static int lastKillId = -1;
@@ -326,6 +327,7 @@ public final class HudState {
             targetMaxHp = Math.max(1f, le.getMaxHealth());
             lockTicks = isNew ? 0 : lockTicks + 1;
             targetId = e.getId();
+            targetEntity = le;
             if (isNew && targetHostile && !targetDead) Sfx.LOCK.play();
             if (targetDead && targetHostile && e.getId() != lastKillId) {
                 lastKillId = e.getId();
@@ -337,6 +339,7 @@ public final class HudState {
             hasTarget = false;
             lockTicks = 0;
             targetId = -1;
+            targetEntity = null;
         }
     }
 

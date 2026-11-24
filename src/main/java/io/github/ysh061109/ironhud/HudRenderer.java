@@ -59,7 +59,9 @@ public final class HudRenderer {
         if (HudConfig.SHOW_CRACKS.get()) cracks(w, h, t);
         cornerBrackets(w, h, boot, pri);
         if (flying || HudConfig.HORIZON_ALWAYS.get()) horizon(cam, p, pt, w, h, pri, acc);
+        scanPulse(w, h, pt, t, pri, acc);
         if (HudConfig.SHOW_MARKERS.get()) markers(cam, p, pt, t, w, h, pri, acc);
+        TargetScan.render(cam, pt, t, w, h, pri, acc);
         if (HudConfig.SHOW_COMPASS.get()) compass(p, pt, w, t, boot, pri, acc);
         if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(h, t, boot, pri);
         reactor(p, 58f, h - 58f, t, boot, pri);
@@ -442,6 +444,36 @@ public final class HudRenderer {
                 Draw.col(alert ? RED : pri, blink * boot), s);
     }
 
+    // ------------------------------------------------------------ scan pulse
+
+    /** Full-screen expanding ring (the wide-area scan). */
+    private static void scanPulse(int w, int h, float pt, float t, int pri, int acc) {
+        float since = HudState.age + pt - HudState.scanStart;
+        if (since < 0f || since >= 100f) return;
+        float pr = Mth.clamp(since / 40f, 0f, 1f);
+        float e = 1f - (1f - pr) * (1f - pr);
+        float fade = 1f - Mth.clamp((since - 40f) / 30f, 0f, 1f);
+        float cx = w / 2f, cy = h / 2f;
+        float r = e * (float) Math.hypot(cx, cy);
+        for (int k = 0; k < 6; k++) {
+            float rr = r - k * 7f;
+            if (rr < 2f) continue;
+            float al = (k == 0 ? 0.85f : 0.32f / k) * fade * (1f - pr * 0.5f);
+            Draw.ring(cx, cy, rr, k == 0 ? 2.2f : 1f, Draw.col(acc, al));
+        }
+        if (r > 24f) {
+            for (int i = 0; i < 90; i++) {
+                float a = (float) Math.toRadians(i * 4f + t * 2f);
+                float len = i % 5 == 0 ? 8f : 3.5f;
+                float c0 = (float) Math.cos(a), s0 = (float) Math.sin(a);
+                Draw.line(cx + c0 * r, cy + s0 * r, cx + c0 * (r - len), cy + s0 * (r - len), 1f,
+                        Draw.col(pri, 0.7f * fade));
+            }
+        }
+        Draw.textCenter(String.format(Locale.ROOT, "WIDE-AREA SCAN  %d%%", Math.round(pr * 100f)), cx, cy + 72f,
+                Draw.col(acc, fade), 0.8f);
+    }
+
     // --------------------------------------------------------------- reticle
 
     private static void reticle(float cx, float cy, float t, float boot, int pri) {
@@ -478,18 +510,6 @@ public final class HudRenderer {
             Draw.ring(cx, cy, 2.5f, 1f, Draw.col(rgb, 0.7f * pulse(t, 0.5f) + 0.3f));
         }
 
-        float tx = cx + d + 8f, ty = cy - 14f;
-        Draw.text(HudState.targetName.toUpperCase(Locale.ROOT), tx, ty, Draw.col(rgb, 1f), 0.9f);
-        Draw.text(HudState.targetDead ? "NEUTRALIZED"
-                        : String.format(Locale.ROOT, "DIST %.1f M", HudState.targetDist),
-                tx, ty + 10f, Draw.col(WHITE, 0.9f), 0.8f);
-
-        float bw = 60f, by = ty + 21f;
-        float f = Mth.clamp(HudState.targetHp / HudState.targetMaxHp, 0f, 1f);
-        Draw.rect(tx, by, tx + bw, by + 3f, Draw.col(rgb, 0.25f));
-        Draw.rect(tx, by, tx + bw * f, by + 3f, Draw.col(rgb, 0.95f));
-        Draw.text(String.format(Locale.ROOT, "%.0f/%.0f", HudState.targetHp, HudState.targetMaxHp),
-                tx, by + 5f, Draw.col(WHITE, 0.8f), 0.7f);
     }
 
     // ---------------------------------------------------- collision readout
@@ -525,20 +545,32 @@ public final class HudRenderer {
             LivingEntity e = c.e();
             if (e.getId() == HudState.targetId && HudState.hasTarget) continue;
             if (drawn >= 24) break;
-            Vec3 ep = e.getPosition(pt).add(0, e.getBbHeight() + 0.35, 0);
+            double yMul = scanning ? 0.5 : 1.0;
+            Vec3 ep = e.getPosition(pt).add(0, e.getBbHeight() * yMul + (scanning ? 0.0 : 0.35), 0);
             if (!cam.project(ep, XY)) continue;
             if (!cam.onScreen(XY, 12f)) continue;
             drawn++;
             float x = XY[0], y = XY[1];
             int rgb = hostile ? RED : c.kind() == HudState.PLAYER ? acc : pri;
             float a = (scanning ? scanFade : 1f) * (hostile ? 0.9f : 0.75f);
+            String name = e.getName().getString().toUpperCase(Locale.ROOT);
             if (hostile && !scanning) {
                 Draw.triDown(x, y, 3.5f, 1.2f, Draw.col(rgb, a));
-                Draw.textCenter(String.format(Locale.ROOT, "%.0fM", c.dist()), x, y - 15f, Draw.col(rgb, a), 0.65f);
+                Draw.textCenter(String.format(Locale.ROOT, "%s %.0fHP  %.0fM", name, e.getHealth(), c.dist()),
+                        x, y - 15f, Draw.col(rgb, a), 0.65f);
             } else {
-                Draw.brackets(x, y + 6f, 6f, 3f, 1f, Draw.col(rgb, a));
-                String label = e.getName().getString().toUpperCase(Locale.ROOT);
-                Draw.textCenter(label + " " + Math.round(c.dist()) + "M", x, y - 8f, Draw.col(rgb, a), 0.65f);
+                float reveal = since - (float) (c.dist() / range * 40.0);
+                Draw.dashedRing(x, y, 10f, 1.2f, t * 2f, 8, Draw.col(rgb, a));
+                if (reveal >= 0f && reveal < 14f) {
+                    Draw.ring(x, y, 10f + reveal * 1.6f, 1.2f, Draw.col(rgb, a * (1f - reveal / 14f)));
+                }
+                Draw.textCenter(String.format(Locale.ROOT, "%s  %.0fM", name, c.dist()), x, y - 17f,
+                        Draw.col(rgb, a), 0.65f);
+                if (e.getMaxHealth() > 0f) {
+                    float bw = 24f, f = Mth.clamp(e.getHealth() / e.getMaxHealth(), 0f, 1f);
+                    Draw.rect(x - bw / 2f, y + 14f, x + bw / 2f, y + 16f, Draw.col(rgb, 0.25f * a));
+                    Draw.rect(x - bw / 2f, y + 14f, x - bw / 2f + bw * f, y + 16f, Draw.col(rgb, a));
+                }
             }
         }
 
