@@ -1,0 +1,52 @@
+{
+  "boot": {
+    "sounds": [
+      "ironhud:boot"
+    ]
+  },
+  "power_down": {
+    "sounds": [
+      "ironhud:power_down"
+    ]
+  },
+  "alert": {
+    "sounds": [
+      "ironhud:alert"
+    ]
+  },
+  "critical": {
+    "sounds": [
+      "ironhud:critical"
+    ]
+  },
+  "breach": {
+    "sounds": [
+      "ironhud:breach"
+    ]
+  },
+  "lock": {
+    "sounds": [
+      "ironhud:lock"
+    ]
+  },
+  "kill": {
+    "sounds": [
+      "ironhud:kill"
+    ]
+  },
+  "tick": {
+    "sounds": [
+      "ironhud:tick"
+    ]
+  },
+  "collision": {
+    "sounds": [
+      "ironhud:collision"
+    ]
+  },
+  "ping": {
+    "sounds": [
+      "ironhud:ping"
+    ]
+  }
+}

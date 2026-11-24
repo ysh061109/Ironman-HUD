@@ -1,0 +1,30 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "MIT"
+issueTrackerURL = "https://github.com/ysh061109/ironman-hud/issues"
+
+[[mods]]
+modId = "ironhud"
+version = "1.0.0"
+displayName = "Iron HUD"
+authors = "ysh061109"
+description = '''
+Client-side sci-fi suit HUD: reactor vitals, armor damage diagram, radar, compass, target lock-on,
+artificial horizon, collision warnings, optical zoom and synthesized alert sounds.
+Unofficial fan project; not affiliated with or endorsed by any film studio.
+'''
+
+# side = "CLIENT": the server does not need this mod.
+[[dependencies.ironhud]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.0,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.ironhud]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "CLIENT"

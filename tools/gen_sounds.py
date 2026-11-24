@@ -1,0 +1,114 @@
+#!/usr/bin/env python3
+"""Synthesizes every sound effect used by the mod (original audio, no samples).
+
+Usage: python3 tools/gen_sounds.py   (needs numpy + ffmpeg with libvorbis)
+"""
+import os, subprocess, tempfile, wave
+import numpy as np
+
+SR = 44100
+OUT = os.path.join(os.path.dirname(__file__), "..", "src", "main", "resources",
+                   "assets", "ironhud", "sounds")
+rng = np.random.default_rng(1234)
+
+
+def t_of(d):
+    return np.linspace(0, d, int(SR * d), endpoint=False)
+
+
+def env(n, a=0.005, r=0.03):
+    e = np.ones(n)
+    na, nr = max(1, int(SR * a)), max(1, int(SR * r))
+    e[:na] = np.linspace(0, 1, na)
+    e[-nr:] = np.minimum(e[-nr:], np.linspace(1, 0, nr))
+    return e
+
+
+def tone(f, d, a=0.005, r=0.03, harm=(1.0,), vol=1.0):
+    t = t_of(d)
+    s = sum(h * np.sin(2 * np.pi * f * (i + 1) * t) for i, h in enumerate(harm))
+    return vol * s / max(1e-9, sum(harm)) * env(len(t), a, r)
+
+
+def sweep(f0, f1, d, a=0.01, r=0.05, vol=1.0):
+    t = t_of(d)
+    f = f0 * (f1 / f0) ** (t / d)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    return vol * np.sin(ph) * env(len(t), a, r)
+
+
+def silence(d):
+    return np.zeros(int(SR * d))
+
+
+def lowpass(x, k):
+    kern = np.ones(k) / k
+    return np.convolve(x, kern, mode="same")
+
+
+def save(name, x, gain=0.8):
+    x = np.asarray(x, dtype=np.float64)
+    x = x / max(1e-9, np.max(np.abs(x))) * gain
+    pcm = (x * 32767).astype("<i2")
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        path = tmp.name
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
+        w.writeframes(pcm.tobytes())
+    out = os.path.join(OUT, name + ".ogg")
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", path,
+                    "-c:a", "libvorbis", "-q:a", "4", out], check=True)
+    os.unlink(path)
+    print("wrote", out)
+
+
+os.makedirs(OUT, exist_ok=True)
+
+# HUD boot: rising sweep, then three confirmation chirps
+boot = np.concatenate([
+    sweep(180, 1400, 0.7, vol=0.6) + 0.25 * sweep(360, 2800, 0.7, vol=0.6),
+    silence(0.05),
+    tone(1320, 0.07, harm=(1, .3)), silence(0.05),
+    tone(1760, 0.07, harm=(1, .3)), silence(0.05),
+    tone(2349, 0.16, r=0.12, harm=(1, .3)),
+])
+save("boot", boot)
+
+save("power_down", sweep(1000, 110, 0.6, r=0.2))
+
+# generic alert: two soft tones
+save("alert", np.concatenate([tone(988, 0.11, harm=(1, .4)), silence(0.03),
+                              tone(740, 0.16, r=0.08, harm=(1, .4))]))
+
+# critical klaxon: pulsed, slightly distorted square-ish wave
+pulse = np.tanh(2.2 * tone(620, 0.22, a=0.01, r=0.04, harm=(1, .5, .33, .2)))
+klax = np.concatenate([pulse, silence(0.06), np.tanh(2.2 * tone(840, 0.22, a=0.01, r=0.04, harm=(1, .5, .33, .2))),
+                       silence(0.06), pulse, silence(0.06),
+                       np.tanh(2.2 * tone(840, 0.28, a=0.01, r=0.1, harm=(1, .5, .33, .2)))])
+save("critical", klax)
+
+# armor breach: noise crunch + sub thump + metallic ring
+n = int(SR * 0.6)
+noise = rng.standard_normal(n) * np.exp(-np.linspace(0, 9, n))
+crunch = lowpass(noise, 6) * 1.4
+thump = sweep(140, 38, 0.6, a=0.002, r=0.2) * np.exp(-np.linspace(0, 5, n))
+ring = (tone(1180, 0.6, a=0.001, r=0.4) + 0.6 * tone(1770, 0.6, a=0.001, r=0.4)) * np.exp(-np.linspace(0, 8, n)) * 0.18
+save("breach", crunch + thump + ring)
+
+# lock-on blip
+save("lock", np.concatenate([tone(1500, 0.045, harm=(1, .3)), silence(0.025), tone(2100, 0.06, harm=(1, .3))]))
+
+# target eliminated: descending triple
+save("kill", np.concatenate([tone(1250, 0.08, harm=(1, .3)), silence(0.03),
+                             tone(940, 0.08, harm=(1, .3)), silence(0.03),
+                             tone(620, 0.2, r=0.12, harm=(1, .3))]))
+
+save("tick", tone(2600, 0.02, a=0.001, r=0.01))
+
+# collision warning: fast triple beep
+b = tone(1040, 0.09, a=0.004, r=0.02, harm=(1, .5, .3))
+save("collision", np.concatenate([b, silence(0.05), b, silence(0.05), b, silence(0.05),
+                                  tone(1040, 0.2, a=0.004, r=0.08, harm=(1, .5, .3))]))
+
+# waypoint ping
+save("ping", sweep(900, 1700, 0.18, a=0.005, r=0.1))

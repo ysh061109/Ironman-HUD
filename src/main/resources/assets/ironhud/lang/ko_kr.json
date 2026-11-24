@@ -1,0 +1,21 @@
+{
+  "key.categories.ironhud": "아이언 HUD",
+  "key.ironhud.toggle": "HUD 켜기/끄기",
+  "key.ironhud.zoom": "광학 줌 (누르고 있기, 휠로 조절)",
+  "key.ironhud.waypoint": "웨이포인트 설정/해제",
+  "key.ironhud.scan": "광역 스캔 펄스",
+  "ironhud.configuration.title": "아이언 HUD",
+  "ironhud.configuration.theme": "색상 테마",
+  "ironhud.configuration.sounds": "효과음",
+  "ironhud.configuration.volume": "효과음 볼륨",
+  "ironhud.configuration.hideVanillaBars": "기본 체력/방어/허기 바 숨기기",
+  "ironhud.configuration.showCompass": "나침반",
+  "ironhud.configuration.showRadar": "레이더",
+  "ironhud.configuration.showSuitStatus": "슈트 상태 도면",
+  "ironhud.configuration.showMarkers": "월드 마커",
+  "ironhud.configuration.showCracks": "바이저 균열",
+  "ironhud.configuration.horizonAlways": "인공 수평선 항상 표시",
+  "ironhud.configuration.scanRange": "락온 거리",
+  "ironhud.configuration.radarRange": "레이더 범위",
+  "ironhud.configuration.zoomMax": "최대 광학 줌"
+}

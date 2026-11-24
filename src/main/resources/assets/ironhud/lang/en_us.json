@@ -1,0 +1,21 @@
+{
+  "key.categories.ironhud": "Iron HUD",
+  "key.ironhud.toggle": "Toggle HUD",
+  "key.ironhud.zoom": "Optical zoom (hold, scroll to adjust)",
+  "key.ironhud.waypoint": "Set / clear waypoint",
+  "key.ironhud.scan": "Wide-area scan pulse",
+  "ironhud.configuration.title": "Iron HUD",
+  "ironhud.configuration.theme": "Color theme",
+  "ironhud.configuration.sounds": "Sound effects",
+  "ironhud.configuration.volume": "Sound volume",
+  "ironhud.configuration.hideVanillaBars": "Hide vanilla health/armor/food bars",
+  "ironhud.configuration.showCompass": "Compass tape",
+  "ironhud.configuration.showRadar": "Radar",
+  "ironhud.configuration.showSuitStatus": "Suit status diagram",
+  "ironhud.configuration.showMarkers": "World markers",
+  "ironhud.configuration.showCracks": "Visor cracks",
+  "ironhud.configuration.horizonAlways": "Always show artificial horizon",
+  "ironhud.configuration.scanRange": "Target lock range",
+  "ironhud.configuration.radarRange": "Radar range",
+  "ironhud.configuration.zoomMax": "Max optical zoom"
+}
