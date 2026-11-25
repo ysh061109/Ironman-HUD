@@ -75,6 +75,16 @@ public final class HudConfig {
                             + "(%MODUS_OUT% on Windows) and read the text from $MODUS_TEXT. Example for Piper: "
                             + "echo \"$MODUS_TEXT\" | piper --model en_GB-alan-medium.onnx --output_file \"$MODUS_OUT\"")
                     .define("ttsCommand", "");
+    public static final ModConfigSpec.BooleanValue NEURAL_VOICE =
+            B.comment("Use the downloaded Piper neural voice when installed (/modus voice install)")
+                    .define("neuralVoice", true);
+    public static final ModConfigSpec.ConfigValue<String> PIPER_URL =
+            B.comment("Override the Piper engine archive URL (blank = official release for your OS)")
+                    .define("piperUrl", "");
+    public static final ModConfigSpec.ConfigValue<String> PIPER_VOICE_URL =
+            B.comment("Override the voice .onnx URL (its .onnx.json must sit next to it). Blank = British male "
+                    + "en_GB-alan-medium (English) / ko_KR-kss-medium (Korean)")
+                    .define("piperVoiceUrl", "");
     public static final ModConfigSpec.BooleanValue VOICE_FX =
             B.comment("Apply the helmet radio filter to Modus' voice").define("voiceFx", true);
     public static final ModConfigSpec.BooleanValue MIC_ENABLED =

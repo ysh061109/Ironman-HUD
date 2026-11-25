@@ -29,8 +29,14 @@ public final class ModusCommands {
                 .then(Commands.literal("install").executes(c -> {
                     msg(c.getSource(), "Installing offline voice recognition (Vosk + small model) into config/modus ...");
                     Mic.install(Modus::chatInfo);
+                    Piper.install(Modus::chatInfo);
                     return 1;
                 }))
+                .then(Commands.literal("voice").then(Commands.literal("install").executes(c -> {
+                    msg(c.getSource(), "Downloading the neural voice (Piper + " + Piper.voiceName() + ") into config/modus/piper ...");
+                    Piper.install(Modus::chatInfo);
+                    return 1;
+                })))
                 .then(Commands.literal("mic")
                         .then(Commands.literal("on").executes(c -> {
                             HudConfig.MIC_ENABLED.set(true);
@@ -53,7 +59,7 @@ public final class ModusCommands {
                     return 1;
                 }))
                 .then(Commands.literal("status").executes(c -> {
-                    msg(c.getSource(), "TTS: " + Voice.backend() + " / " + Voice.status);
+                    msg(c.getSource(), "TTS: " + Voice.backend() + " / " + Voice.status + " (neural installed: " + Piper.ready() + ")");
                     msg(c.getSource(), "Mic: " + Mic.status + " (installed: " + Mic.installed() + ")");
                     return 1;
                 })));

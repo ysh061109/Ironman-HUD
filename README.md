@@ -49,7 +49,8 @@ NeoForge **1.21.1** 클라이언트 전용 모드 — 영화 속 파워슈트 HU
   `/modus mic on` 또는 `V` 푸시투토크. 마이크는 기본 꺼짐이며, 켜기 전에는 아무것도 듣지 않습니다.
 - **명령 예시**: "Modus, status report" / "scan" / "zoom in" / "mark waypoint" / "power to sensors" / "lock targets" / "run diagnostics" /
   "where am I" / "weather" — 한국어: "모더스, 상태 보고" / "스캔" / "확대" / "웨이포인트" / "센서에 전력" / "락온" / "진단" / "위치" / "날씨"
-- 명령: `/modus say|ask|install|mic on|off|lang|test|status`
+- **신경망 목소리**: `/modus install`(또는 `/modus voice install`)이 [Piper](https://github.com/rhasspy/piper) 엔진과 음성 모델(영어: 영국 남성 `en_GB-alan-medium`, 한국어: `ko_KR-kss-medium`)을 `config/modus/piper`로 내려받아 컴퓨터 기본 TTS 대신 사용합니다. 받기에 실패하거나 실행이 안 되면 자동으로 시스템 음성으로 돌아갑니다. 영화 속 자비스(폴 베타니) 목소리 그대로는 아니며, 다른 음성은 `piperVoiceUrl`로 교체 가능합니다.
+- 명령: `/modus say|ask|install|voice install|mic on|off|lang|test|status`
 
 ## 추가 HUD 모듈
 

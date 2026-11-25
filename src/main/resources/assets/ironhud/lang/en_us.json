@@ -39,5 +39,8 @@
   "ironhud.configuration.honorificEn": "Address (English)",
   "ironhud.configuration.honorificKo": "Address (Korean)",
   "ironhud.configuration.voskJarUrl": "Vosk library URL",
-  "ironhud.configuration.voskModelUrl": "Speech model URL"
+  "ironhud.configuration.voskModelUrl": "Speech model URL",
+  "ironhud.configuration.neuralVoice": "Use downloaded neural voice",
+  "ironhud.configuration.piperUrl": "Piper engine URL",
+  "ironhud.configuration.piperVoiceUrl": "Piper voice (.onnx) URL"
 }

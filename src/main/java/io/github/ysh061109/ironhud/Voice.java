@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  * given a helmet-radio filter and played through Java Sound on a worker thread.
  */
 public final class Voice {
-    public enum Backend { WINDOWS, MAC, ESPEAK, CUSTOM, NONE }
+    public enum Backend { PIPER, WINDOWS, MAC, ESPEAK, CUSTOM, NONE }
 
     private record Job(String text) {}
 
@@ -36,6 +36,12 @@ public final class Voice {
     private static volatile boolean interrupt = false;
     private static volatile long mutedUntil = 0L;
     public static volatile String status = "idle";
+    private static volatile boolean pipeFailed = false;
+
+    public static void clearStatus() {
+        pipeFailed = false;
+        status = "idle";
+    }
 
     private Voice() {}
 
@@ -85,6 +91,7 @@ public final class Voice {
 
     public static Backend backend() {
         if (!HudConfig.TTS_COMMAND.get().isBlank()) return Backend.CUSTOM;
+        if (HudConfig.NEURAL_VOICE.get() && Piper.ready() && !pipeFailed) return Backend.PIPER;
         String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
         if (os.contains("win")) return Backend.WINDOWS;
         if (os.contains("mac")) return Backend.MAC;
@@ -106,7 +113,7 @@ public final class Voice {
 
     private static String key(String text) throws Exception {
         String k = backend() + "|" + HudConfig.VOICE_LANG.get() + "|" + HudConfig.VOICE_NAME.get() + "|"
-                + HudConfig.VOICE_RATE.get() + "|" + HudConfig.TTS_COMMAND.get() + "|" + text;
+                + HudConfig.VOICE_RATE.get() + "|" + HudConfig.TTS_COMMAND.get() + "|" + HudConfig.PIPER_VOICE_URL.get() + "|" + text;
         byte[] d = MessageDigest.getInstance("SHA-1").digest(k.getBytes(StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 9; i++) sb.append(String.format("%02x", d[i]));
@@ -131,7 +138,19 @@ public final class Voice {
                 if (!f.exists() || f.length() < 100) todo.add(new String[]{key(t), t});
             }
             if (todo.isEmpty()) return;
-            if (b == Backend.WINDOWS) {
+            if (b == Backend.PIPER) {
+                for (String[] it : todo) {
+                    File out = cacheDir().resolve(it[0] + ".wav").toFile();
+                    if (!Piper.synth(it[1], out.toPath())) {
+                        pipeFailed = true; // fall back to the system voice from now on
+                        status = "neural voice failed, using system voice";
+                        break;
+                    }
+                }
+                if (pipeFailed) {
+                    synthesize(texts);
+                }
+            } else if (b == Backend.WINDOWS) {
                 synthWindows(todo);
             } else {
                 for (String[] it : todo) {
