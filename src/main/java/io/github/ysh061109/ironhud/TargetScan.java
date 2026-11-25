@@ -136,6 +136,8 @@ public final class TargetScan {
         Draw.line(ax, ay, ex, ey, 1.2f, Draw.col(sec, a));
         Draw.line(ex, ey, ex + side * 12f, ey, 1.2f, Draw.col(sec, a));
 
+        WireCard.render(e, cx, cy, R, side, ease, t, w, h, rgb, sec, dead);
+
         List<Line> lines = buildLines(e, rgb, sec);
         float lh = 9.5f, pw = 150f, scale = 0.7f;
         float ph = 22f + lines.size() * lh;
