@@ -232,4 +232,20 @@ public final class FilmStyle {
         String s = n == 0 ? "ARMOR --" : "ARMOR " + Math.round(avg / n * 100f) + "%";
         Draw.textCenter(s, cx, y + ph - 12f, Draw.col(0xFFFFFF, 0.85f * boot), 0.5f);
     }
+
+    /** Film-style classification tag ("HOSTILE", "CIVILIAN", ...) as in the hostage-rescue targeting shot. */
+    public static String classify(LivingEntity e, boolean hostile) {
+        if (hostile) return "HOSTILE";
+        if (e instanceof net.minecraft.world.entity.player.Player) return "ALLY";
+        if (e instanceof net.minecraft.world.entity.npc.AbstractVillager) return "CIVILIAN";
+        if (e instanceof net.minecraft.world.entity.animal.Animal) return "WILDLIFE";
+        return "NEUTRAL";
+    }
+
+    public static void classTag(float x, float y, String tag, int rgb, float alpha) {
+        float tw = Draw.width(tag, 0.5f);
+        Draw.rect(x - tw / 2f - 3f, y, x + tw / 2f + 3f, y + 8f, Draw.col(0x02101A, 0.55f * alpha));
+        Draw.box(x - tw / 2f - 3f, y, tw + 6f, 8f, rgb, 0f, 0.9f * alpha);
+        Draw.textCenter(tag, x, y + 1.5f, Draw.col(0xFFFFFF, alpha), 0.5f);
+    }
 }

@@ -601,6 +601,7 @@ public final class HudRenderer {
             } else {
                 float reveal = since - (float) (c.dist() / range * 40.0);
                 Draw.dashedRing(x, y, 10f, 1.2f, t * 2f, 8, Draw.col(rgb, a));
+                FilmStyle.classTag(x, y + 19f, FilmStyle.classify(e, hostile), rgb, a);
                 if (reveal >= 0f && reveal < 14f) {
                     Draw.ring(x, y, 10f + reveal * 1.6f, 1.2f, Draw.col(rgb, a * (1f - reveal / 14f)));
                 }
@@ -608,8 +609,8 @@ public final class HudRenderer {
                         Draw.col(rgb, a), 0.65f);
                 if (e.getMaxHealth() > 0f) {
                     float bw = 24f, f = Mth.clamp(e.getHealth() / e.getMaxHealth(), 0f, 1f);
-                    Draw.rect(x - bw / 2f, y + 14f, x + bw / 2f, y + 16f, Draw.col(rgb, 0.25f * a));
-                    Draw.rect(x - bw / 2f, y + 14f, x - bw / 2f + bw * f, y + 16f, Draw.col(rgb, a));
+                    Draw.rect(x - bw / 2f, y + 29f, x + bw / 2f, y + 31f, Draw.col(rgb, 0.25f * a));
+                    Draw.rect(x - bw / 2f, y + 29f, x - bw / 2f + bw * f, y + 31f, Draw.col(rgb, a));
                 }
             }
         }
