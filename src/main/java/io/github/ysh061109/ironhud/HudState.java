@@ -93,26 +93,17 @@ public final class HudState {
             lastLockCount = 0;
             return;
         }
-        Vec3 eye = p.getEyePosition();
-        Vec3 look = p.getViewVector(1.0F);
-        double range = scanRange();
+        double range = radarRange();
         List<Contact> cand = new ArrayList<>();
         for (Contact c : contacts) {
-            if (c.kind() != HOSTILE || c.dist() > range) continue;
-            Vec3 ctr = c.e().getBoundingBox().getCenter();
-            Vec3 to = ctr.subtract(eye);
-            double d = to.length();
-            if (d < 1.0e-3 || to.dot(look) / d < 0.8) continue;
-            BlockHitResult bh = level.clip(new ClipContext(eye, ctr, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-            if (bh.getType() == HitResult.Type.BLOCK && bh.getLocation().distanceToSqr(eye) < d * d - 1.0) continue;
+            if (c.kind() != HOSTILE || c.dist() > range || c.e().isDeadOrDying()) continue;
             cand.add(c);
         }
         cand.sort(Comparator.comparingDouble((Contact c) -> -(TargetScan.attack(c.e()) + c.e().getMaxHealth() * 0.15 + (range - c.dist()) * 0.1)));
-        int max = Power.maxLocks();
-        for (int i = 0; i < cand.size() && i < max; i++) locks.add(cand.get(i));
+        for (int i = 0; i < cand.size() && i < 16; i++) locks.add(cand.get(i));
         if (locks.size() > lastLockCount) {
-            Sfx.LOCK.play(1.0f + 0.1f * locks.size());
-            SysLog.add("MULTI-LOCK: " + locks.size() + " TARGETS");
+            Sfx.LOCK.play(1.0f + 0.05f * Math.min(8, locks.size()));
+            SysLog.add("TACTICAL LOCK: " + locks.size() + " HOSTILES");
         }
         lastLockCount = locks.size();
     }
@@ -164,6 +155,9 @@ public final class HudState {
     public static Vec3 waypoint = null;
     public static boolean zoomLatched = false;
     public static boolean multiLock = false;
+    public static boolean targetAimed = false;
+    private static boolean hullCritLatched = false, hullWarnLatched = false;
+    private static int lastAcquireAge = -9999;
     public static final List<Contact> locks = new ArrayList<>();
     private static int lastLockCount = 0;
     public static final List<float[]> hits = new ArrayList<>();
@@ -276,12 +270,24 @@ public final class HudState {
         hitFlash *= 0.88f;
 
         float frac = hp / max;
+        // announce once when the hull drops into a band; re-arm only after it recovers above the band
         if (frac <= 0.3f) {
-            Alerts.fire("hull", "HULL INTEGRITY CRITICAL",
-                    String.format("%.0f%% REMAINING", frac * 100f), Level.CRIT, 70, 90, Sfx.CRITICAL);
-        } else if (frac <= 0.5f) {
-            Alerts.fire("hull50", "HULL DAMAGE DETECTED",
-                    String.format("%.0f%% REMAINING", frac * 100f), Level.WARN, 50, 400, Sfx.ALERT);
+            if (!hullCritLatched) {
+                hullCritLatched = true;
+                Alerts.fire("hull", "HULL INTEGRITY CRITICAL",
+                        String.format("%.0f%% REMAINING", frac * 100f), Level.CRIT, 80, 0, Sfx.CRITICAL);
+            }
+        } else if (frac > 0.45f) {
+            hullCritLatched = false;
+        }
+        if (frac <= 0.5f && frac > 0.3f) {
+            if (!hullWarnLatched) {
+                hullWarnLatched = true;
+                Alerts.fire("hull50", "HULL DAMAGE DETECTED",
+                        String.format("%.0f%% REMAINING", frac * 100f), Level.WARN, 50, 0, Sfx.ALERT);
+            }
+        } else if (frac > 0.6f) {
+            hullWarnLatched = false;
         }
 
         int food = p.getFoodData().getFoodLevel();
@@ -402,47 +408,56 @@ public final class HudState {
     // ---------------------------------------------------------------- target
 
     private static void scanTarget(LocalPlayer p, ClientLevel level) {
-        double range = scanRange();
-        Vec3 eye = p.getEyePosition();
-        Vec3 look = p.getViewVector(1.0F);
-        Vec3 end = eye.add(look.scale(range));
-
-        // Don't see through walls: limit the entity search to the first solid block.
-        BlockHitResult bh = level.clip(new ClipContext(
-                eye, end, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-        double maxSq = bh.getType() == HitResult.Type.MISS ? range * range : bh.getLocation().distanceToSqr(eye);
-
-        AABB box = p.getBoundingBox().expandTowards(look.scale(range)).inflate(1.0);
-        EntityHitResult hit = ProjectileUtil.getEntityHitResult(
-                p, eye, end, box,
-                e -> !e.isSpectator() && e.isPickable() && e instanceof LivingEntity,
-                maxSq);
-
-        if (hit != null && hit.getEntity() instanceof LivingEntity le) {
-            Entity e = hit.getEntity();
-            boolean isNew = e.getId() != targetId;
+        // No gaze-based info any more: details only exist while the tactical lock key is active.
+        LivingEntity pick = null;
+        targetAimed = false;
+        if (multiLock && !locks.isEmpty()) {
+            Vec3 eye = p.getEyePosition();
+            Vec3 look = p.getViewVector(1.0F);
+            double best = 0.985;
+            for (Contact c : locks) {
+                Vec3 to = c.e().getBoundingBox().getCenter().subtract(eye);
+                double d = to.length();
+                if (d < 1.0e-3) continue;
+                double cos = to.dot(look) / d;
+                if (cos > best) {
+                    best = cos;
+                    pick = c.e();
+                    targetAimed = cos > 0.995;
+                }
+            }
+            if (pick == null && targetEntity != null) {
+                for (Contact c : locks) if (c.e() == targetEntity) pick = targetEntity;
+            }
+            if (pick == null) pick = locks.get(0).e();
+        }
+        if (pick != null) {
+            LivingEntity le = pick;
+            Vec3 eye = p.getEyePosition();
+            boolean isNew = le.getId() != targetId;
             hasTarget = true;
             targetHostile = le instanceof Enemy;
             targetDead = le.isDeadOrDying();
             targetName = le.getDisplayName().getString();
-            targetDist = Math.sqrt(eye.distanceToSqr(hit.getLocation()));
+            targetDist = Math.sqrt(eye.distanceToSqr(le.getBoundingBox().getCenter()));
             targetHp = Math.max(0f, le.getHealth());
             targetMaxHp = Math.max(1f, le.getMaxHealth());
             lockTicks = isNew ? 0 : lockTicks + 1;
-            targetId = e.getId();
+            targetId = le.getId();
             targetEntity = le;
-            if (isNew && targetHostile && !targetDead) {
+            if (isNew && targetHostile && !targetDead && age - lastAcquireAge > 60) {
+                lastAcquireAge = age;
                 Sfx.LOCK.play();
                 Modus.onNewTarget(le);
-                SysLog.add("TARGET ACQUIRED: " + targetName.toUpperCase(java.util.Locale.ROOT));
             }
-            if (targetDead && targetHostile && e.getId() != lastKillId) {
-                lastKillId = e.getId();
+        } else {
+            if (hasTarget && targetEntity != null && targetEntity.isDeadOrDying() && targetHostile
+                    && targetId != lastKillId) {
+                lastKillId = targetId;
                 kills++;
                 Alerts.fire("kill", "TARGET ELIMINATED", targetName.toUpperCase(java.util.Locale.ROOT),
                         Level.INFO, 50, 0, Sfx.KILL);
             }
-        } else {
             hasTarget = false;
             lockTicks = 0;
             targetId = -1;

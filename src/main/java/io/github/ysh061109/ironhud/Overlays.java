@@ -114,7 +114,7 @@ public final class Overlays {
     public static void sysLog(float x, float y, float boot, int pri) {
         List<SysLog.Entry> lines = SysLog.all();
         int shown = 0;
-        for (int i = lines.size() - 1; i >= 0 && shown < 5; i--) {
+        for (int i = lines.size() - 1; i >= 0 && shown < 3; i--) {
             SysLog.Entry e = lines.get(i);
             float age = HudState.age - e.born();
             if (age > 300f) continue;
@@ -133,7 +133,7 @@ public final class Overlays {
         List<Modus.Msg> log = Modus.LOG;
         if (log.isEmpty()) return;
         int shown = 0;
-        float baseY = h - 62f;
+        float baseY = h - 84f;
         for (int i = log.size() - 1; i >= 0 && shown < 3; i--) {
             Modus.Msg m = log.get(i);
             float age = HudState.age + pt - m.born();
@@ -159,20 +159,28 @@ public final class Overlays {
 
     // ------------------------------------------------------------ multi-lock
 
-    public static void priorityList(float x, float y, float t, int pri) {
-        if (!HudState.multiLock) return;
-        Draw.text("PRIORITY TARGETS [" + HudState.locks.size() + "]", x, y, Draw.col(pri, 1f), 0.7f);
-        Draw.rect(x, y + 9f, x + 120f, y + 10f, Draw.col(pri, 0.6f));
+    /** Right-aligned list of locked targets. Returns the next free y. */
+    public static float priorityList(float xRight, float y, float maxY, float t, int pri) {
+        Draw.textRight("PRIORITY TARGETS [" + HudState.locks.size() + "]", xRight, y, Draw.col(pri, 1f), 0.65f);
+        Draw.rect(xRight - 110f, y + 8f, xRight, y + 9f, Draw.col(pri, 0.6f));
+        float yy = y + 12f;
         int i = 0;
         for (Contact c : HudState.locks) {
+            if (i >= 5 || yy + 8f > maxY) break;
             LivingEntity e = c.e();
             int rgb = i == 0 ? RED : i == 1 ? AMBER : pri;
-            String s = String.format(Locale.ROOT, "%d %s  %.0fHP  %.0fM", i + 1,
-                    e.getName().getString().toUpperCase(Locale.ROOT), e.getHealth(), c.dist());
-            Draw.text(s, x, y + 13f + i * 9f, Draw.col(rgb, 0.95f), 0.65f);
+            String nm = e.getName().getString().toUpperCase(Locale.ROOT);
+            if (nm.length() > 12) nm = nm.substring(0, 12);
+            String s = String.format(Locale.ROOT, "%d %s %.0fHP %.0fM", i + 1, nm, e.getHealth(), c.dist());
+            Draw.textRight(s, xRight, yy, Draw.col(rgb, 0.95f), 0.6f);
+            yy += 8.5f;
             i++;
         }
-        if (HudState.locks.isEmpty()) Draw.text("NO TARGETS IN VIEW", x, y + 13f, Draw.col(0x7B8794, 1f), 0.65f);
+        if (HudState.locks.isEmpty()) {
+            Draw.textRight("NO HOSTILES IN RANGE", xRight, yy, Draw.col(0x7B8794, 1f), 0.6f);
+            yy += 8.5f;
+        }
+        return yy + 4f;
     }
 
     public static void multiLock(Cam cam, float pt, float t, int w, int h, int pri) {

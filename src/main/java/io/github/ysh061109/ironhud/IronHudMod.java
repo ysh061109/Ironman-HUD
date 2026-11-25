@@ -51,6 +51,8 @@ public class IronHudMod {
         modBus.addListener(this::registerLayers);
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
         NeoForge.EVENT_BUS.addListener(this::onGuiLayerPre);
+        NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ContainerScreenEvent.Render.Background e) ->
+                HudUi.skinScreen(e.getGuiGraphics(), e.getContainerScreen()));
         NeoForge.EVENT_BUS.addListener(this::onFov);
         NeoForge.EVENT_BUS.addListener(this::onScroll);
         NeoForge.EVENT_BUS.addListener((ClientChatReceivedEvent.Player e) -> Comms.receive(e));
@@ -92,7 +94,12 @@ public class IronHudMod {
             HudState.zoomHeld = ZOOM.isDown() && mc.screen == null;
             while (MULTI.consumeClick()) {
                 HudState.multiLock = !HudState.multiLock;
-                SysLog.add(HudState.multiLock ? "MULTI-LOCK ENGAGED" : "MULTI-LOCK OFF");
+                if (HudState.multiLock) {
+                    HudState.startScan(); // scan sweep, then every hostile in range stays marked
+                    SysLog.add("TACTICAL LOCK ENGAGED");
+                } else {
+                    SysLog.add("TACTICAL LOCK OFF");
+                }
             }
             while (POWER.consumeClick()) Power.cycle();
             while (DIAG.consumeClick()) {
@@ -127,6 +134,15 @@ public class IronHudMod {
     /** Hide the vanilla health / armor / hunger bars while the HUD replaces them. */
     private void onGuiLayerPre(RenderGuiLayerEvent.Pre event) {
         Minecraft mc = Minecraft.getInstance();
+        if (HudUi.hotbarActive(mc)) {
+            ResourceLocation hn = event.getName();
+            if (hn.equals(VanillaGuiLayers.HOTBAR) || hn.equals(VanillaGuiLayers.EXPERIENCE_BAR)
+                    || hn.equals(VanillaGuiLayers.EXPERIENCE_LEVEL) || hn.equals(VanillaGuiLayers.SELECTED_ITEM_NAME)
+                    || hn.equals(VanillaGuiLayers.AIR_LEVEL)) {
+                event.setCanceled(true);
+                return;
+            }
+        }
         if (!HudConfig.HIDE_VANILLA_BARS.get() || !HudState.active(mc)
                 || mc.gameMode == null || !mc.gameMode.canHurtPlayer()) return;
         ResourceLocation n = event.getName();

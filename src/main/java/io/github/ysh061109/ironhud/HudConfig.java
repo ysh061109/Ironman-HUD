@@ -53,6 +53,19 @@ public final class HudConfig {
             B.comment("Armament / ammo panel").define("showWeapons", true);
     public static final ModConfigSpec.BooleanValue SHOW_SYSLOG =
             B.comment("System log and Modus subtitles").define("showSyslog", true);
+    public static final ModConfigSpec.IntValue TOP_RIGHT_RESERVE =
+            B.comment("Pixels (GUI units) kept free at the top right for a minimap mod. -1 = automatic (reserves space "
+                    + "when Xaero's / JourneyMap / FTB Chunks / Antique Atlas style map mods are installed)")
+                    .defineInRange("topRightReserve", -1, -1, 200);
+    public static final ModConfigSpec.BooleanValue CUSTOM_HOTBAR =
+            B.comment("Replace the vanilla hotbar, XP bar and item name with the suit-styled versions")
+                    .define("customHotbar", true);
+    public static final ModConfigSpec.BooleanValue SKIN_SCREENS =
+            B.comment("Dress the inventory and container screens in the suit interface style")
+                    .define("skinScreens", true);
+    public static final ModConfigSpec.BooleanValue LOW_DETAIL =
+            B.comment("Cheaper rendering: fewer decorative segments and ticks. Also switches on automatically when FPS is low")
+                    .define("lowDetail", false);
     public static final ModConfigSpec.BooleanValue SHOW_HELMET =
             B.comment("Helmet frame vignette").define("showHelmet", true);
 
@@ -112,5 +125,23 @@ public final class HudConfig {
 
     public static int accent() {
         return THEME.get().accent;
+    }
+
+    private static int reserveCache = Integer.MIN_VALUE;
+
+    /** GUI units to keep free at the top right. */
+    public static int topRightReserve() {
+        int v = TOP_RIGHT_RESERVE.get();
+        if (v >= 0) return v;
+        if (reserveCache == Integer.MIN_VALUE) {
+            var ml = net.neoforged.fml.ModList.get();
+            boolean map = false;
+            for (String id : new String[]{"xaerominimap", "xaerominimapfair", "journeymap", "ftbchunks",
+                    "antiqueatlas", "voxelmap", "minimap"}) {
+                if (ml.isLoaded(id)) map = true;
+            }
+            reserveCache = map ? 100 : 0;
+        }
+        return reserveCache;
     }
 }

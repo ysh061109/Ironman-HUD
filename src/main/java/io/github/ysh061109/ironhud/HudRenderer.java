@@ -67,33 +67,48 @@ public final class HudRenderer {
         TargetScan.render(cam, pt, t, w, h, pri, acc);
         Overlays.hits(p, pt, w, h, t);
         if (HudConfig.SHOW_COMPASS.get()) compass(p, pt, w, t, boot, pri, acc);
-        if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(h, t, boot, pri);
-        if (HudConfig.SHOW_WEAPONS.get()) WeaponPanel.render(p, 14f, h / 2f + 38f, t, boot, pri, acc);
-        reactor(p, 58f, h - 58f, t, boot, pri);
-        FilmStyle.thrustArc(58f, h - 58f, t, boot, pri, RED, Mth.clamp((p.isFallFlying() ? Math.max(HudState.speed, HudState.flightSpeed) / 40f : HudState.speed / 8f), 0f, 1f));
-        FilmStyle.diagnosticCube(p, w, h, t, boot, acc == RED ? AMBER : AMBER);
-        if (HudConfig.SHOW_RADAR.get()) radar(p, pt, w - 58f, h - 58f, t, boot, pri, acc);
-        if (HudConfig.SHOW_TERRAIN.get()) TerrainMap.render(p, pt, w - 142f, h - 196f, 130f, 80f, t, boot, pri, acc);
-        infoPanel(p, level, w, t, boot, pri);
+        boolean lowD = HudConfig.LOW_DETAIL.get() || fps < 40f;
+        Draw.lod = lowD;
+
+        // ---- left column: log, hull lamp, suit status, reactor
+        if (HudConfig.SHOW_SYSLOG.get()) Overlays.sysLog(14f, 20f, boot, pri);
+        FilmStyle.hullLamp(p, 14f, 52f, t, boot, pri, RED);
+        if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(h * 0.5f - 42f, t, boot, pri);
+        reactor(p, 50f, h - 50f, t, boot, pri);
+
+        // ---- right column: stacked from the top, below any minimap, stopping above the radar
+        float ry = 8f + HudConfig.topRightReserve();
+        float rMax = h - 100f;
+        ry = infoPanel(p, level, w, ry, rMax, t, boot, pri);
+        if (HudState.multiLock) ry = Overlays.priorityList(w - 12f, ry, rMax, t, pri);
+        if (HudConfig.SHOW_TERRAIN.get() && ry + 62f <= rMax) {
+            TerrainMap.render(p, pt, w - 124f, ry, 112f, 58f, t, boot, pri, acc);
+            ry += 62f;
+        }
+        if (HudConfig.SHOW_WEAPONS.get() && ry + 56f <= rMax) {
+            WeaponPanel.render(p, w - 124f, ry, t, boot, pri, acc);
+            ry += 60f;
+        }
+        if (ry + 46f <= rMax) FilmStyle.diagnosticCube(p, w, (int) ry, t, boot, AMBER);
+        if (HudConfig.SHOW_RADAR.get()) radar(p, pt, w - 50f, h - 50f, t, boot, pri, acc);
+
         reticle(w / 2f, h / 2f, t, boot, pri);
         FilmStyle.reticleExtras(w / 2f, h / 2f, w, heading(p, pt), boot, pri);
+        FilmStyle.vitals(p, 102f, h - 50f, t, boot, pri, RED);
         FilmStyle.bottomArc(w, h, t, boot, pri);
         FilmStyle.acquisitionTag(w, h, boot, HudState.multiLock ? HudState.locks.size() : HudState.contacts.size());
-        FilmStyle.vitals(p, 118f, h - 66f, t, boot, pri, RED);
         FilmStyle.gaugeRow(p, w, h, t, boot, pri, RED);
         FilmStyle.ladder(p, pt, h, boot, pri);
         collisionReadout(w / 2f, h / 2f, t, p);
         alertBanners(w, t);
-        if (HudConfig.SHOW_SYSLOG.get()) {
-            Overlays.sysLog(14f, 26f, boot, pri);
-            Overlays.modusPanel(w, h, pt, t, pri, acc);
-        }
-        Overlays.priorityList(14f, 78f, t, pri);
+        if (HudConfig.SHOW_SYSLOG.get()) Overlays.modusPanel(w, h, pt, t, pri, acc);
         Comms.draw(w, h, t, pri, acc);
         Diagnostics.draw(p, level, w, h, t, pri, acc);
         Overlays.boot(w, h, pt, pri, acc);
 
+        HudUi.hotbarFrame(mc, w, h, t, boot, pri, acc);
         Draw.end(g);
+        HudUi.hotbarItems(g, mc, w, h);
         Comms.drawFace(g, w, h);
         RenderSystem.enableCull();
     }
@@ -245,8 +260,8 @@ public final class HudRenderer {
         return 0.85f;
     }
 
-    private static void suitStatus(int h, float t, float boot, int pri) {
-        float x0 = 14f, y0 = h / 2f - 52f;
+    private static void suitStatus(float y0, float t, float boot, int pri) {
+        float x0 = 14f;
         Draw.text("SUIT STATUS", x0, y0 - 14f, Draw.col(pri, boot), 0.8f);
         Draw.line(x0, y0 - 4f, x0 + 90f * boot, y0 - 4f, 1f, Draw.col(pri, 0.6f));
 
@@ -317,20 +332,6 @@ public final class HudRenderer {
         String hp = Integer.toString(Math.round(p.getHealth()));
         Draw.textCenter(hp, cx, cy - 4f, Draw.col(WHITE, boot), 1f);
 
-        float lx = cx + 52f, ly = cy - 22f;
-        Draw.text("HULL " + Math.round(p.getHealth()) + "/" + Math.round(maxHp), lx, ly, Draw.col(hpCol, boot), 0.8f);
-        Draw.text("PWR  " + Math.round(foodF * 100f) + "%", lx, ly + 10f, Draw.col(AMBER, boot), 0.8f);
-        Draw.text("ARM  " + p.getArmorValue(), lx, ly + 20f, Draw.col(WHITE, boot), 0.8f);
-
-        float air = p.getAirSupply() / (float) Math.max(1, p.getMaxAirSupply());
-        if (air < 0.999f) {
-            float bw = 50f;
-            Draw.text("O2", lx, ly + 30f, Draw.col(pri, boot), 0.8f);
-            Draw.rect(lx + 14f, ly + 31f, lx + 14f + bw, ly + 36f, Draw.col(pri, 0.2f));
-            Draw.rect(lx + 14f, ly + 31f, lx + 14f + bw * Mth.clamp(air, 0f, 1f), ly + 36f,
-                    Draw.col(air < 0.3f ? RED : pri, 0.9f));
-        }
-        routing(lx, ly + 42f, boot, pri);
     }
 
     private static void routing(float lx, float ay, float boot, int pri) {
@@ -422,65 +423,36 @@ public final class HudRenderer {
 
     // ------------------------------------------------------------ info panel
 
-    private static void infoPanel(LocalPlayer p, ClientLevel level, int w, float t, float boot, int pri) {
-        float x = w - 12f, y = 36f, s = 0.8f;
+    /** Compact readout. Draws as many lines as fit between y0 and maxY, in priority order. Returns the next free y. */
+    private static float infoPanel(LocalPlayer p, ClientLevel level, int w, float y0, float maxY, float t,
+                                   float boot, int pri) {
+        float x = w - 12f, y = y0, s = 0.75f;
         int c = Draw.col(pri, boot), dim = Draw.col(WHITE, 0.85f * boot);
-
-        Draw.textRight("SUIT SYSTEMS ONLINE", x, y, c, s);
-        Draw.line(x - 120f * boot, y + 10f, x, y + 10f, 1f, Draw.col(pri, 0.6f));
-        y += 15f;
-
-        Draw.textRight(String.format(Locale.ROOT, "POS %d  %d  %d", p.getBlockX(), p.getBlockY(), p.getBlockZ()), x, y, dim, s);
-        y += 10f;
-        String biome = level.getBiome(p.blockPosition()).unwrapKey()
-                .map(k -> k.location().getPath().replace('_', ' ').toUpperCase(Locale.ROOT))
-                .orElse("UNKNOWN");
-        Draw.textRight(biome, x, y, dim, s);
-        y += 10f;
-
         float spd = Math.max(HudState.speed, HudState.flightSpeed * (p.isFallFlying() ? 1f : 0f));
-        Draw.textRight(String.format(Locale.ROOT, "SPD %.1f M/S", spd), x, y, dim, s);
-        y += 10f;
-        Draw.textRight(String.format(Locale.ROOT, "VS  %+.1f M/S", HudState.vSpeed), x, y, dim, s);
-        y += 10f;
         String agl = HudState.groundDist < 0 ? "---" : String.format(Locale.ROOT, "%.0f", HudState.groundDist);
-        Draw.textRight("ALT " + p.getBlockY() + "  AGL " + agl, x, y, dim, s);
-        y += 10f;
-
+        boolean alert = HudState.threats > 0;
         long dayTime = level.getDayTime() % 24000L;
         int hours = (int) ((dayTime / 1000L + 6L) % 24L);
         int mins = (int) ((dayTime % 1000L) * 60L / 1000L);
-        Draw.textRight(String.format(Locale.ROOT, "TIME %02d:%02d   FPS %d", hours, mins, Math.round(fps)), x, y, dim, s);
-        y += 10f;
         String ms = Voice.isSpeaking() ? "SPEAKING" : Mic.isRunning() ? "LISTENING" : "ONLINE";
-        Draw.textRight("MODUS " + ms, x, y, Draw.col(Mic.isRunning() ? 0x39FF88 : pri, boot), s);
+        String[] lines = {
+                String.format(Locale.ROOT, "ALT %d  AGL %s", p.getBlockY(), agl),
+                String.format(Locale.ROOT, "SPD %.1f  VS %+.1f M/S", spd, HudState.vSpeed),
+                "HOSTILES " + HudState.threats + "  ELIM " + HudState.kills,
+                String.format(Locale.ROOT, "TIME %02d:%02d  FPS %d", hours, mins, Math.round(fps)),
+                "MODUS " + ms,
+                String.format(Locale.ROOT, "POS %d %d %d", p.getBlockX(), p.getBlockY(), p.getBlockZ()),
+        };
+        int[] cols = {dim, dim, Draw.col(alert ? RED : pri, (alert ? 0.6f + 0.4f * (float) Math.sin(t * 0.4f) : 1f) * boot),
+                dim, Draw.col(Mic.isRunning() ? 0x39FF88 : pri, boot), dim};
+        Draw.textRight("SYSTEMS ONLINE", x, y, c, s);
+        Draw.line(x - 100f * boot, y + 9f, x, y + 9f, 1f, Draw.col(pri, 0.6f));
         y += 13f;
-
-        // altitude trace
-        float gw = 110f, gh = 20f, gx = x - gw;
-        Draw.box(gx, y, gw, gh, pri, 0.10f * boot, 0.35f * boot);
-        float min = Float.MAX_VALUE, max = -Float.MAX_VALUE;
-        for (float v : HudState.altHist) {
-            min = Math.min(min, v);
-            max = Math.max(max, v);
+        for (int i = 0; i < lines.length && y + 8f <= maxY; i++) {
+            Draw.textRight(lines[i], x, y, cols[i], s);
+            y += 9.5f;
         }
-        float span = Math.max(8f, max - min);
-        int n = HudState.altHist.length, idx = HudState.altIndex();
-        float px = 0, py = 0;
-        for (int i = 0; i < n; i++) {
-            float v = HudState.altHist[(idx + 1 + i) % n];
-            float fx = gx + 2f + (gw - 4f) * i / (n - 1f);
-            float fy = y + gh - 2f - (gh - 4f) * Mth.clamp((v - min) / span, 0f, 1f);
-            if (i > 0) Draw.line(px, py, fx, fy, 1f, Draw.col(pri, 0.9f * boot));
-            px = fx;
-            py = fy;
-        }
-        y += gh + 5f;
-
-        boolean alert = HudState.threats > 0;
-        float blink = alert ? (0.6f + 0.4f * (float) Math.sin(t * 0.4f)) : 1f;
-        Draw.textRight("HOSTILES " + HudState.threats + "    ELIM " + HudState.kills, x, y,
-                Draw.col(alert ? RED : pri, blink * boot), s);
+        return y + 4f;
     }
 
     // ------------------------------------------------------------ scan pulse
@@ -534,7 +506,7 @@ public final class HudRenderer {
             Draw.textCenter("SCROLL: ADJUST", cx, cy + r + 16f, Draw.col(WHITE, 0.6f), 0.65f);
         }
 
-        if (!HudState.hasTarget) {
+        if (!HudState.hasTarget || !HudState.targetAimed) {
             for (int i = 0; i < 8; i++) {
                 Draw.arc(cx, cy, 13f, 14f, i * 45f + t * 2f, 20f, Draw.col(pri, 0.45f * boot));
             }
@@ -544,9 +516,11 @@ public final class HudRenderer {
         int rgb = HudState.targetDead ? GRAY : (HudState.targetHostile ? RED : pri);
         float lock = Math.min(1f, HudState.lockTicks / 8f);
         float d = 22f - 8f * lock;
-        Draw.brackets(cx, cy, d, 6f, 1.2f, Draw.col(rgb, 0.95f));
-        if (!HudState.targetDead) FilmStyle.lockArrows(cx, cy, lock, t, rgb);
-        if (lock >= 1f && !HudState.targetDead) {
+        if (HudState.targetAimed) {
+            Draw.brackets(cx, cy, d, 6f, 1.2f, Draw.col(rgb, 0.95f));
+            if (!HudState.targetDead) FilmStyle.lockArrows(cx, cy, lock, t, rgb);
+        }
+        if (lock >= 1f && !HudState.targetDead && HudState.targetAimed) {
             Draw.ring(cx, cy, 2.5f, 1f, Draw.col(rgb, 0.7f * pulse(t, 0.5f) + 0.3f));
         }
 
@@ -577,7 +551,8 @@ public final class HudRenderer {
 
         for (Contact c : HudState.contacts) {
             boolean hostile = c.kind() == HudState.HOSTILE;
-            if (!scanning && (!hostile || c.dist() > 32)) continue;
+            if (!scanning) continue; // hostiles are only shown by the scan pulse or the tactical lock
+            if (HudState.multiLock && hostile) continue; // drawn by the lock overlay
             if (scanning) {
                 double reach = range * Mth.clamp(since / 40f, 0f, 1f);
                 if (c.dist() > reach) continue;

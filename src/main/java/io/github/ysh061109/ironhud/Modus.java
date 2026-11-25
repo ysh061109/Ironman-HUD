@@ -116,7 +116,13 @@ public final class Modus {
         sayText(pick(p), urgent);
     }
 
+    private static String lastSpoken = "";
+    private static int lastSpokenAge = -9999;
+
     public static void sayText(String text, boolean urgent) {
+        if (text.equals(lastSpoken) && HudState.age - lastSpokenAge < 400) return;
+        lastSpoken = text;
+        lastSpokenAge = HudState.age;
         Minecraft.getInstance().execute(() -> {
             LOG.add(new Msg(true, text, HudState.age));
             while (LOG.size() > 40) LOG.remove(0);

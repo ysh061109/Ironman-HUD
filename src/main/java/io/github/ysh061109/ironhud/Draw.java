@@ -109,9 +109,13 @@ public final class Draw {
     }
 
     /** Ring segment. Angles in degrees, screen space (0 = right, 90 = down). */
+    /** Cheaper rendering mode (coarser arcs, fewer decorative dashes). */
+    public static boolean lod = false;
+
     public static void arc(float cx, float cy, float r0, float r1, float startDeg, float sweepDeg, int argb) {
         if (sweepDeg <= 0.01f) return;
-        int segs = Math.max(1, (int) Math.ceil(sweepDeg / 5f));
+        float step = r1 < 14f ? 15f : (lod ? 10f : 6f);
+        int segs = Math.max(1, (int) Math.ceil(sweepDeg / step));
         float pc = 0, ps = 0;
         for (int i = 0; i <= segs; i++) {
             double a = Math.toRadians(startDeg + sweepDeg * i / segs);

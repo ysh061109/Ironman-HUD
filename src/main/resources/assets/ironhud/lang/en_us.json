@@ -20,7 +20,7 @@
   "ironhud.configuration.zoomMax": "Max optical zoom",
   "key.ironhud.chat": "Talk to Modus (HUD chat)",
   "key.ironhud.ptt": "Modus push-to-talk (hold)",
-  "key.ironhud.multilock": "Multi-target lock",
+  "key.ironhud.multilock": "Tactical lock (scan + track hostiles)",
   "key.ironhud.power": "Cycle power routing",
   "key.ironhud.diag": "System diagnostics",
   "ironhud.configuration.showTerrain": "3D terrain map",

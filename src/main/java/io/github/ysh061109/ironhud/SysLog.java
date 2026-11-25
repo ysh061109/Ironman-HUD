@@ -12,6 +12,12 @@ public final class SysLog {
     private SysLog() {}
 
     public static void add(String text) {
+        for (int i = LINES.size() - 1; i >= 0 && i >= LINES.size() - 4; i--) {
+            if (LINES.get(i).text().equals(text) && HudState.age - LINES.get(i).born() < 600) {
+                LINES.remove(i); // same message again: just refresh it instead of stacking duplicates
+                break;
+            }
+        }
         LINES.add(new Entry(text, HudState.age));
         while (LINES.size() > 6) LINES.remove(0);
     }

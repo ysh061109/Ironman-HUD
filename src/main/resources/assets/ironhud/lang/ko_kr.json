@@ -20,7 +20,7 @@
   "ironhud.configuration.zoomMax": "최대 광학 줌",
   "key.ironhud.chat": "Modus에게 말하기 (HUD 챗)",
   "key.ironhud.ptt": "Modus 푸시투토크 (누르고 있기)",
-  "key.ironhud.multilock": "다중 락온",
+  "key.ironhud.multilock": "전술 락온 (스캔 + 적 상시 추적)",
   "key.ironhud.power": "전력 배분 전환",
   "key.ironhud.diag": "시스템 진단",
   "ironhud.configuration.showTerrain": "3D 지형 지도",

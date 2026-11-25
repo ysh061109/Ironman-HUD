@@ -42,7 +42,7 @@ public final class FilmStyle {
         f[4] = HudState.waypoint != null ? 1f : 0f;
         boolean[] lit = {armor < 0.3f && n > 0, HudState.hasTarget || HudState.zoomCur > 1.05f, hostiles > 0,
                 p.isFallFlying(), HudState.waypoint != null};
-        float r = 10.5f, gap = 36f, y = h - 27f;
+        float r = 8.5f, gap = 28f, y = h - 46f;
         float x0 = w / 2f - gap * 2f;
         for (int i = 0; i < 5; i++) {
             float x = x0 + i * gap;
@@ -88,14 +88,13 @@ public final class FilmStyle {
                     Draw.disc(x + 2f, y - 2f, 1.5f, ic);
                 }
             }
-            Draw.textCenter(LABELS[i], x, y + r + 6f, Draw.col(0xDFF9FF, 0.55f * s), 0.4f);
         }
     }
 
     /** Left vertical tape ladder (altitude), with a value box and a marker. */
     public static void ladder(LocalPlayer p, float pt, int h, float boot, int pri) {
         double alt = Mth.lerp(pt, p.yo, p.getY());
-        float x = 10f, y0 = h * 0.36f, y1 = h * 0.50f, mid = (y0 + y1) / 2f;
+        float x = 124f, y0 = h * 0.36f, y1 = h * 0.50f, mid = (y0 + y1) / 2f;
         float sp = 5f; // pixels per block
         int c = Draw.col(pri, 0.8f * boot);
         Draw.line(x + 16f, y0, x + 16f, y1, 1f, Draw.col(pri, 0.5f * boot));
@@ -166,7 +165,7 @@ public final class FilmStyle {
 
     /** Luminous curved band along the bottom edge (Iron Man 3 style), with fine ticks. */
     public static void bottomArc(int w, int h, float t, float boot, int pri) {
-        float R = w * 1.15f, cy = h + R - 36f;
+        float R = w * 1.15f, cy = h + R - 30f;
         float half = (float) Math.toDegrees(Math.asin(Math.min(0.95f, (w * 0.5f) / R)));
         float sweep = half * 2f * boot;
         float st = 270f - sweep / 2f;
@@ -192,12 +191,11 @@ public final class FilmStyle {
     /** Green plate used for "TARGET ACQUISITION" while scanning or multi-locking. */
     public static void acquisitionTag(int w, int h, float boot, int count) {
         if (!HudState.multiLock && HudState.age - HudState.scanStart > 100) return;
-        float x = w / 2f + 24f, y = h - 62f;
+        float x = w / 2f - 48f, y = 36f;
         int g = 0x5DFFB0;
         Draw.rect(x, y, x + 96f, y + 12f, Draw.col(0x03231A, 0.75f * boot));
         Draw.box(x, y, 96f, 12f, g, 0f, 0.9f * boot);
-        Draw.text("TARGET ACQUISITION", x + 4f, y + 3f, Draw.col(g, boot), 0.55f);
-        Draw.text("TARGETS " + count, x + 4f, y + 15f, Draw.col(g, 0.85f * boot), 0.5f);
+        Draw.text("TARGET ACQUISITION  " + count, x + 4f, y + 3f, Draw.col(g, boot), 0.5f);
     }
 
     /** Linked hex nodes between locked targets (the network graph seen in the film's lock scenes). */
@@ -242,8 +240,8 @@ public final class FilmStyle {
     }
 
     /** Amber angled plate with a slowly turning wireframe cube: the film's "diagnostic feed" panel. */
-    public static void diagnosticCube(LocalPlayer p, int w, int h, float t, float boot, int amber) {
-        float x = w - 92f, y = h * 0.40f, pw = 80f, ph = 64f, cut = 8f;
+    public static void diagnosticCube(LocalPlayer p, int w, int yTop, float t, float boot, int amber) {
+        float x = w - 124f, y = yTop, pw = 112f, ph = 42f, cut = 7f;
         int fr = Draw.col(amber, 0.85f * boot);
         Draw.rect(x + cut, y, x + pw, y + ph, Draw.col(0x1A1204, 0.45f * boot));
         Draw.rect(x, y + cut, x + cut, y + ph, Draw.col(0x1A1204, 0.45f * boot));
@@ -252,8 +250,8 @@ public final class FilmStyle {
         Draw.line(x, y + cut, x, y + ph, 1.2f, fr);
         Draw.line(x, y + ph, x + pw, y + ph, 1.2f, fr);
         Draw.line(x + pw, y, x + pw, y + ph, 1.2f, fr);
-        Draw.text("DIAGNOSTIC FEED", x + 12f, y + 3f, Draw.col(amber, boot), 0.45f);
-        float cx = x + pw / 2f, cy = y + 31f, r = 13f;
+        Draw.text("DIAGNOSTIC FEED", x + 11f, y + 3f, Draw.col(amber, boot), 0.45f);
+        float cx = x + 24f, cy = y + 25f, r = 10f;
         float ay = t * 0.03f, ax = 0.6f;
         float[][] v = new float[8][2];
         for (int i = 0; i < 8; i++) {
@@ -276,8 +274,10 @@ public final class FilmStyle {
             avg += Mth.clamp(HudState.armorPct[i], 0f, 1f);
             n++;
         }
-        String s = n == 0 ? "ARMOR --" : "ARMOR " + Math.round(avg / n * 100f) + "%";
-        Draw.textCenter(s, cx, y + ph - 12f, Draw.col(0xFFFFFF, 0.85f * boot), 0.5f);
+        Draw.text(n == 0 ? "ARMOR --" : "ARMOR " + Math.round(avg / n * 100f) + "%", x + 50f, y + 17f,
+                Draw.col(0xFFFFFF, 0.85f * boot), 0.55f);
+        Draw.text("THRUST " + Math.round(Mth.clamp(HudState.speed / 8f, 0f, 1f) * 100f) + "%", x + 50f, y + 27f,
+                Draw.col(amber, 0.85f * boot), 0.55f);
     }
 
     /** Film-style classification tag ("HOSTILE", "CIVILIAN", ...) as in the hostage-rescue targeting shot. */
@@ -317,25 +317,56 @@ public final class FilmStyle {
         }
     }
 
-    /** Food, oxygen and experience as angled plates with segmented bars (film-style readouts). */
+    /** Food and oxygen on the left of the hotbar, experience on the right. */
     public static void vitals(LocalPlayer p, float x, float y, float t, float boot, int pri, int warn) {
         float food = Mth.clamp(p.getFoodData().getFoodLevel() / 20f, 0f, 1f);
         float air = Mth.clamp(p.getAirSupply() / (float) Math.max(1, p.getMaxAirSupply()), 0f, 1f);
         float xp = Mth.clamp(p.experienceProgress, 0f, 1f);
         boolean underwater = air < 0.999f;
-        float pw = 112f, ph = 11f;
+        float pw = 76f, ph = 11f;
+        int w = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScaledWidth();
         float[] vals = {food, air, xp};
-        String[] lab = {"NUTRIENT", "O2 RESERVE", "XP  LV " + p.experienceLevel};
+        String[] lab = {"NUTRI", "O2", "XP " + p.experienceLevel};
+        float[] px = {x, x, w - x - pw};
+        float[] py = {y, y + ph + 3f, y};
         for (int i = 0; i < 3; i++) {
-            float yy = y + i * (ph + 3f);
             float v = vals[i];
             boolean low = i < 2 && v < 0.3f && (i == 0 || underwater);
             int rgb = low ? warn : (i == 2 ? 0x8DFFB0 : pri);
             float a = boot * (i == 1 && !underwater ? 0.45f : 1f) * (low ? 0.65f + 0.35f * (float) Math.sin(t * 0.7f) : 1f);
-            plate(x, yy, pw, ph, rgb, a);
-            Draw.text(lab[i], x + 5f, yy + 3f, Draw.col(0xDFF9FF, 0.85f * a), 0.45f);
-            segBar(x + 52f, yy + 3f, 40f, 5f, 10, v, rgb, a);
-            Draw.textRight(Math.round(v * 100f) + "%", x + pw - 4f, yy + 3f, Draw.col(rgb, a), 0.45f);
+            plate(px[i], py[i], pw, ph, rgb, a);
+            Draw.text(lab[i], px[i] + 5f, py[i] + 3f, Draw.col(0xDFF9FF, 0.85f * a), 0.45f);
+            segBar(px[i] + 30f, py[i] + 3f, 34f, 5f, 8, v, rgb, a);
+            if (low) Draw.text("!", px[i] + pw - 8f, py[i] + 3f, Draw.col(warn, a), 0.6f);
         }
+    }
+
+    /** Hull lamp driven by the real Minecraft health: steady cyan, amber below 50%, flashing red below 30%. */
+    public static void hullLamp(LocalPlayer p, float x, float y, float t, float boot, int pri, int warn) {
+        float hp = p.getHealth(), max = Math.max(1f, p.getMaxHealth());
+        float frac = Mth.clamp(hp / max, 0f, 1f);
+        boolean crit = frac <= 0.3f, caution = !crit && frac <= 0.5f;
+        int rgb = crit ? warn : caution ? 0xFFB020 : pri;
+        float flash = crit ? (0.5f + 0.5f * (float) Math.sin(t * 0.8f)) : caution ? 0.85f : 1f;
+        float pw = 112f, ph = 20f;
+        plate(x, y, pw, ph, rgb, boot);
+        // warning triangle lamp
+        float tx = x + 12f, ty = y + 10f;
+        int lamp = Draw.col(rgb, (crit || caution ? 0.35f + 0.65f * flash : 0.5f) * boot);
+        Draw.line(tx - 6f, ty + 5f, tx + 6f, ty + 5f, 1.4f, lamp);
+        Draw.line(tx - 6f, ty + 5f, tx, ty - 6f, 1.4f, lamp);
+        Draw.line(tx + 6f, ty + 5f, tx, ty - 6f, 1.4f, lamp);
+        if (crit || caution) {
+            Draw.rect(tx - 0.7f, ty - 2f, tx + 0.7f, ty + 2f, lamp);
+            Draw.rect(tx - 0.7f, ty + 3f, tx + 0.7f, ty + 4.2f, lamp);
+        } else {
+            Draw.disc(tx, ty + 1f, 1.8f, lamp);
+        }
+        Draw.text("HULL", x + 24f, y + 3f, Draw.col(rgb, boot * flash), 0.6f);
+        String num = Math.round(hp) + "/" + Math.round(max);
+        float ab = p.getAbsorptionAmount();
+        if (ab > 0.5f) num += " +" + Math.round(ab);
+        Draw.textRight(num, x + pw - 5f, y + 3f, Draw.col(0xFFFFFF, 0.9f * boot), 0.6f);
+        segBar(x + 24f, y + 12f, pw - 30f, 4f, 20, frac, rgb, boot * (crit ? 0.6f + 0.4f * flash : 1f));
     }
 }
