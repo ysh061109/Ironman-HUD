@@ -63,6 +63,7 @@ public final class HudRenderer {
         scanPulse(w, h, pt, t, pri, acc);
         if (HudConfig.SHOW_MARKERS.get()) markers(cam, p, pt, t, w, h, pri, acc);
         Overlays.multiLock(cam, pt, t, w, h, pri);
+        FilmStyle.lockGraph(cam, pt, t, pri);
         TargetScan.render(cam, pt, t, w, h, pri, acc);
         Overlays.hits(p, pt, w, h, t);
         if (HudConfig.SHOW_COMPASS.get()) compass(p, pt, w, t, boot, pri, acc);
@@ -74,6 +75,8 @@ public final class HudRenderer {
         infoPanel(p, level, w, t, boot, pri);
         reticle(w / 2f, h / 2f, t, boot, pri);
         FilmStyle.reticleExtras(w / 2f, h / 2f, w, heading(p, pt), boot, pri);
+        FilmStyle.bottomArc(w, h, t, boot, pri);
+        FilmStyle.acquisitionTag(w, h, boot, HudState.multiLock ? HudState.locks.size() : HudState.contacts.size());
         FilmStyle.gaugeRow(p, w, h, t, boot, pri, RED);
         FilmStyle.ladder(p, pt, h, boot, pri);
         collisionReadout(w / 2f, h / 2f, t, p);

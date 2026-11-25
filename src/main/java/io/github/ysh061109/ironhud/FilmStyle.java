@@ -116,4 +116,68 @@ public final class FilmStyle {
         }
         if (cam.project(f.add(0, 0.05, 0), A)) Draw.disc(A[0], A[1], 1.2f, Draw.col(rgb, alpha));
     }
+
+    /** Luminous curved band along the bottom edge (Iron Man 3 style), with fine ticks. */
+    public static void bottomArc(int w, int h, float t, float boot, int pri) {
+        float R = w * 1.15f, cy = h + R - 36f;
+        float half = (float) Math.toDegrees(Math.asin(Math.min(0.95f, (w * 0.5f) / R)));
+        float sweep = half * 2f * boot;
+        float st = 270f - sweep / 2f;
+        Draw.arc(cx(w), cy, R - 1.2f, R + 0.8f, st, sweep, Draw.col(pri, 0.75f));
+        Draw.arc(cx(w), cy, R - 9f, R - 8.3f, st, sweep, Draw.col(pri, 0.3f));
+        for (int i = 0; i <= 60; i++) {
+            float a = st + sweep * i / 60f;
+            double r = Math.toRadians(a);
+            float len = i % 5 == 0 ? 6f : 3f;
+            float c = (float) Math.cos(r), sn = (float) Math.sin(r);
+            Draw.line(cx(w) + c * (R - 1f), cy + sn * (R - 1f), cx(w) + c * (R - 1f - len), cy + sn * (R - 1f - len),
+                    1f, Draw.col(pri, 0.4f));
+        }
+        float sweepPos = (t * 0.012f) % 1f;
+        float a = st + sweep * sweepPos;
+        Draw.arc(cx(w), cy, R - 2f, R + 1.5f, a, 5f, Draw.col(0xFFFFFF, 0.8f * boot));
+    }
+
+    private static float cx(int w) {
+        return w / 2f;
+    }
+
+    /** Green plate used for "TARGET ACQUISITION" while scanning or multi-locking. */
+    public static void acquisitionTag(int w, int h, float boot, int count) {
+        if (!HudState.multiLock && HudState.age - HudState.scanStart > 100) return;
+        float x = w / 2f - 120f, y = h - 62f;
+        int g = 0x5DFFB0;
+        Draw.rect(x, y, x + 96f, y + 12f, Draw.col(0x03231A, 0.75f * boot));
+        Draw.box(x, y, 96f, 12f, g, 0f, 0.9f * boot);
+        Draw.text("TARGET ACQUISITION", x + 4f, y + 3f, Draw.col(g, boot), 0.55f);
+        Draw.text("TARGETS " + count, x + 4f, y + 15f, Draw.col(g, 0.85f * boot), 0.5f);
+    }
+
+    /** Linked hex nodes between locked targets (the network graph seen in the film's lock scenes). */
+    public static void lockGraph(Cam cam, float pt, float t, int pri) {
+        if (!HudState.multiLock) return;
+        boolean have = false;
+        float px = 0, py = 0;
+        int i = 0;
+        for (HudState.Contact c : HudState.locks) {
+            LivingEntity e = c.e();
+            Vec3 off = e.getPosition(pt).subtract(e.position());
+            if (!cam.project(e.getBoundingBox().move(off).getCenter(), B)) {
+                have = false;
+                i++;
+                continue;
+            }
+            if (have) Draw.line(px, py, B[0], B[1], 1f, Draw.col(pri, 0.55f));
+            px = B[0];
+            py = B[1];
+            have = true;
+            float r = 4f + (i == 0 ? 1.5f * (float) Math.sin(t * 0.3f) : 0f);
+            for (int k = 0; k < 6; k++) {
+                double a1 = Math.PI / 3 * k, a2 = Math.PI / 3 * (k + 1);
+                Draw.line(px + (float) Math.cos(a1) * r, py + (float) Math.sin(a1) * r,
+                        px + (float) Math.cos(a2) * r, py + (float) Math.sin(a2) * r, 1f, Draw.col(pri, 0.9f));
+            }
+            i++;
+        }
+    }
 }
