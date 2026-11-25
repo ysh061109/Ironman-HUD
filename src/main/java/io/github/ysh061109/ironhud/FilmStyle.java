@@ -1,0 +1,119 @@
+package io.github.ysh061109.ironhud;
+
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
+
+import java.util.Locale;
+
+/**
+ * Elements taken from studying film stills of the HUD: the row of small round gauges along the bottom,
+ * the vertical tape ladder on the left, bracket arcs and thin cross lines around the reticle, the flat
+ * target rings drawn on the ground under tracked objects, and inward-pointing lock arrows.
+ */
+public final class FilmStyle {
+    private static final float[] A = new float[2];
+    private static final float[] B = new float[2];
+
+    private FilmStyle() {}
+
+    private static final String[] LABELS = {"HP", "AR", "FD", "O2", "SP", "XP"};
+
+    /** Six round gauges centered at the bottom edge, present in almost every film frame. */
+    public static void gaugeRow(LocalPlayer p, int w, int h, float t, float boot, int pri, int warn) {
+        float[] f = new float[6];
+        f[0] = Mth.clamp(p.getHealth() / Math.max(1f, p.getMaxHealth()), 0f, 1f);
+        f[1] = Mth.clamp(p.getArmorValue() / 20f, 0f, 1f);
+        f[2] = Mth.clamp(p.getFoodData().getFoodLevel() / 20f, 0f, 1f);
+        f[3] = Mth.clamp(p.getAirSupply() / (float) Math.max(1, p.getMaxAirSupply()), 0f, 1f);
+        f[4] = Mth.clamp(HudState.speed / (p.isFallFlying() ? 40f : 8f), 0f, 1f);
+        f[5] = Mth.clamp(p.experienceProgress, 0f, 1f);
+        float r = 9f, gap = 30f, y = h - 16f;
+        float x0 = w / 2f - gap * 2.5f;
+        for (int i = 0; i < 6; i++) {
+            float x = x0 + i * gap;
+            float s = Mth.clamp(boot * 6f - i * 0.6f, 0f, 1f);
+            if (s <= 0f) continue;
+            boolean low = f[i] < 0.25f && i < 4;
+            int rgb = low ? warn : pri;
+            float a = s * (low ? 0.65f + 0.35f * (float) Math.sin(t * 0.6f) : 1f);
+            Draw.ring(x, y, r, 1f, Draw.col(rgb, 0.35f * a));
+            Draw.arc(x, y, r - 1.5f, r + 0.5f, -90f, 360f * f[i], Draw.col(rgb, a));
+            Draw.dashedRing(x, y, r + 3.5f, 0.8f, t * (i % 2 == 0 ? 1.5f : -1.5f), 12, Draw.col(pri, 0.25f * s));
+            Draw.textCenter(LABELS[i], x, y - 3f, Draw.col(0xDFF9FF, 0.85f * s), 0.5f);
+        }
+    }
+
+    /** Left vertical tape ladder (altitude), with a value box and a marker. */
+    public static void ladder(LocalPlayer p, float pt, int h, float boot, int pri) {
+        double alt = Mth.lerp(pt, p.yo, p.getY());
+        float x = 10f, y0 = h * 0.36f, y1 = h * 0.50f, mid = (y0 + y1) / 2f;
+        float sp = 5f; // pixels per block
+        int c = Draw.col(pri, 0.8f * boot);
+        Draw.line(x + 16f, y0, x + 16f, y1, 1f, Draw.col(pri, 0.5f * boot));
+        int base = (int) Math.floor(alt);
+        for (int k = -14; k <= 14; k++) {
+            int v = base + k;
+            float y = mid - (float) ((v - alt) * sp);
+            if (y < y0 || y > y1) continue;
+            float edge = 1f - Math.abs(y - mid) / ((y1 - y0) / 2f);
+            boolean major = v % 5 == 0;
+            Draw.line(x + 16f, y, x + (major ? 8f : 12f), y, 1f, Draw.col(pri, (0.3f + 0.6f * edge) * boot));
+            if (major) Draw.text(String.valueOf(v), x - 4f + 14f, y - 3f, Draw.col(pri, (0.3f + 0.6f * edge) * boot), 0.5f);
+        }
+        Draw.rect(x - 2f, mid - 5f, x + 15f, mid + 5f, Draw.col(0x001018, 0.8f * boot));
+        Draw.box(x - 2f, mid - 5f, 17f, 10f, pri, 0f, 0.9f * boot);
+        Draw.textCenter(String.valueOf((int) Math.floor(alt)), x + 6.5f, mid - 3f, c, 0.6f);
+        Draw.text("MSL", x, y0 - 9f, c, 0.55f);
+    }
+
+    /** Thin cross lines, flanking bracket arcs, and the heading tag above the reticle. */
+    public static void reticleExtras(float cx, float cy, int w, float heading, float boot, int pri) {
+        int thin = Draw.col(pri, 0.22f * boot);
+        Draw.line(cx - w * 0.28f, cy, cx - 70f, cy, 0.8f, thin);
+        Draw.line(cx + 70f, cy, cx + w * 0.28f, cy, 0.8f, thin);
+        int c = Draw.col(pri, 0.75f * boot);
+        Draw.arc(cx, cy, 58f, 60f, 150f, 60f, c);
+        Draw.arc(cx, cy, 58f, 60f, -30f, 60f, c);
+        Draw.triDown(cx, cy - 66f, 3f, 1f, c);
+        Draw.textCenter(String.format(Locale.ROOT, "%03d", Math.round(heading) % 360), cx, cy - 80f, c, 0.7f);
+    }
+
+    /** Four arrows pointing inward on a ring: the film's lock-on reticle. */
+    public static void lockArrows(float cx, float cy, float lock, float t, int rgb) {
+        float R = 40f - 6f * lock;
+        int c = Draw.col(rgb, 0.9f);
+        Draw.dashedRing(cx, cy, R, 1f, t * 3f, 16, Draw.col(rgb, 0.5f));
+        for (int i = 0; i < 4; i++) {
+            float a = (float) Math.toRadians(45f + i * 90f);
+            float ca = (float) Math.cos(a), sa = (float) Math.sin(a);
+            float ox = cx + ca * (R + 12f), oy = cy + sa * (R + 12f);
+            float ix = cx + ca * (R + 1f), iy = cy + sa * (R + 1f);
+            Draw.line(ox, oy, ix, iy, 1.4f, c);
+            float px = -sa, py = ca;
+            Draw.line(ix, iy, ix + ca * 6f + px * 4f, iy + sa * 6f + py * 4f, 1.2f, c);
+            Draw.line(ix, iy, ix + ca * 6f - px * 4f, iy + sa * 6f - py * 4f, 1.2f, c);
+        }
+    }
+
+    /** Flat ring on the ground under a tracked entity (projected in 3D), as in the target-acquisition shots. */
+    public static void groundRing(Cam cam, LivingEntity e, float pt, float t, int rgb, float alpha) {
+        Vec3 f = e.getPosition(pt);
+        double r = Math.max(0.6, e.getBbWidth() * 0.9 + 0.3);
+        int n = 20;
+        boolean have = false;
+        float px = 0, py = 0;
+        float rot = t * 0.04f;
+        for (int i = 0; i <= n; i++) {
+            double a = rot + i * Math.PI * 2 / n;
+            Vec3 pnt = f.add(Math.cos(a) * r, 0.05, Math.sin(a) * r);
+            boolean ok = cam.project(pnt, B);
+            if (ok && have && (i % 4 != 3)) Draw.line(px, py, B[0], B[1], 1.1f, Draw.col(rgb, alpha));
+            have = ok;
+            px = B[0];
+            py = B[1];
+        }
+        if (cam.project(f.add(0, 0.05, 0), A)) Draw.disc(A[0], A[1], 1.2f, Draw.col(rgb, alpha));
+    }
+}

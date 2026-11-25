@@ -73,6 +73,9 @@ public final class HudRenderer {
         if (HudConfig.SHOW_TERRAIN.get()) TerrainMap.render(p, pt, w - 142f, h - 196f, 130f, 80f, t, boot, pri, acc);
         infoPanel(p, level, w, t, boot, pri);
         reticle(w / 2f, h / 2f, t, boot, pri);
+        FilmStyle.reticleExtras(w / 2f, h / 2f, w, heading(p, pt), boot, pri);
+        FilmStyle.gaugeRow(p, w, h, t, boot, pri, RED);
+        FilmStyle.ladder(p, pt, h, boot, pri);
         collisionReadout(w / 2f, h / 2f, t, p);
         alertBanners(w, t);
         if (HudConfig.SHOW_SYSLOG.get()) {
@@ -536,6 +539,7 @@ public final class HudRenderer {
         float lock = Math.min(1f, HudState.lockTicks / 8f);
         float d = 22f - 8f * lock;
         Draw.brackets(cx, cy, d, 6f, 1.2f, Draw.col(rgb, 0.95f));
+        if (!HudState.targetDead) FilmStyle.lockArrows(cx, cy, lock, t, rgb);
         if (lock >= 1f && !HudState.targetDead) {
             Draw.ring(cx, cy, 2.5f, 1f, Draw.col(rgb, 0.7f * pulse(t, 0.5f) + 0.3f));
         }
@@ -580,6 +584,7 @@ public final class HudRenderer {
             if (!cam.project(ep, XY)) continue;
             if (!cam.onScreen(XY, 12f)) continue;
             drawn++;
+            FilmStyle.groundRing(cam, e, pt, t, hostile ? RED : c.kind() == HudState.PLAYER ? acc : pri, hostile ? 0.8f : 0.55f);
             float x = XY[0], y = XY[1];
             int rgb = hostile ? RED : c.kind() == HudState.PLAYER ? acc : pri;
             float a = (scanning ? scanFade : 1f) * (hostile ? 0.9f : 0.75f);
@@ -677,25 +682,41 @@ public final class HudRenderer {
 
             int rgb = a.level == Alerts.Level.CRIT ? RED : a.level == Alerts.Level.WARN ? AMBER : HudConfig.primary();
             float flick = a.level == Alerts.Level.CRIT ? 0.65f + 0.35f * pulse(t, 0.8f) : 1f;
-            float bw = 200f * vis, bh = a.sub.isEmpty() ? 18f : 26f;
-            float x0 = cx - bw / 2f;
-
-            Draw.rect(x0, y, x0 + bw, y + bh, Draw.col(0x000000, 0.55f * vis));
-            Draw.rect(x0, y, x0 + bw, y + 1.5f, Draw.col(rgb, flick * vis));
-            Draw.rect(x0, y + bh - 1.5f, x0 + bw, y + bh, Draw.col(rgb, flick * vis));
+            float bw = 230f * vis, bh = a.sub.isEmpty() ? 24f : 36f;
+            float x0 = cx - bw / 2f, cut = 6f;
+            int fr = Draw.col(rgb, flick * vis);
+            Draw.rect(x0 + cut, y, x0 + bw - cut, y + bh, Draw.col(0x02101A, 0.7f * vis));
+            Draw.rect(x0, y + cut, x0 + cut, y + bh - cut, Draw.col(0x02101A, 0.7f * vis));
+            Draw.rect(x0 + bw - cut, y + cut, x0 + bw, y + bh - cut, Draw.col(0x02101A, 0.7f * vis));
+            // angled-corner frame like the film's warning plates
+            Draw.line(x0 + cut, y, x0 + bw - cut, y, 1.4f, fr);
+            Draw.line(x0 + cut, y + bh, x0 + bw - cut, y + bh, 1.4f, fr);
+            Draw.line(x0, y + cut, x0, y + bh - cut, 1.4f, fr);
+            Draw.line(x0 + bw, y + cut, x0 + bw, y + bh - cut, 1.4f, fr);
+            Draw.line(x0, y + cut, x0 + cut, y, 1.4f, fr);
+            Draw.line(x0 + bw - cut, y, x0 + bw, y + cut, 1.4f, fr);
+            Draw.line(x0, y + bh - cut, x0 + cut, y + bh, 1.4f, fr);
+            Draw.line(x0 + bw, y + bh - cut, x0 + bw - cut, y + bh, 1.4f, fr);
             if (a.level != Alerts.Level.INFO) {
-                // hazard stripes on both ends
-                for (int i = 0; i < 4; i++) {
-                    float sx = i * 5f;
-                    Draw.line(x0 + 2f + sx, y + bh - 2f, x0 + 8f + sx, y + 2f, 1.6f, Draw.col(rgb, 0.7f * flick * vis));
-                    Draw.line(x0 + bw - 8f - sx, y + bh - 2f, x0 + bw - 2f - sx, y + 2f, 1.6f, Draw.col(rgb, 0.7f * flick * vis));
+                // small "DANGER ///" tag riding on the top edge, plus a chevron icon
+                String tag = a.level == Alerts.Level.CRIT ? "DANGER" : "CAUTION";
+                Draw.rect(x0 + 10f, y - 5f, x0 + 10f + Draw.width(tag, 0.5f) + 22f, y + 4f, Draw.col(rgb, 0.9f * vis));
+                Draw.text(tag, x0 + 13f, y - 3f, Draw.col(0x02101A, vis), 0.5f);
+                for (int k = 0; k < 3; k++) {
+                    float sx = x0 + 16f + Draw.width(tag, 0.5f) + k * 4f;
+                    Draw.line(sx, y + 3.5f, sx + 3f, y - 4.5f, 1.2f, Draw.col(0x02101A, vis));
+                }
+                float ix = x0 + bw - 18f, iy = y + bh / 2f;
+                for (int k = 0; k < 2; k++) {
+                    Draw.line(ix - 6f, iy - 3f + k * 5f, ix, iy + 2f + k * 5f, 1.8f, fr);
+                    Draw.line(ix + 6f, iy - 3f + k * 5f, ix, iy + 2f + k * 5f, 1.8f, fr);
                 }
             }
-            Draw.textCenter(a.title, cx, y + 4f, Draw.col(rgb, flick * vis), 0.95f);
+            Draw.textCenter(a.title, cx, y + 6f, Draw.col(a.level == Alerts.Level.INFO ? rgb : 0xFFFFFF, flick * vis), 1.2f);
             if (!a.sub.isEmpty()) {
-                Draw.textCenter(a.sub, cx, y + 15f, Draw.col(WHITE, 0.85f * vis), 0.65f);
+                Draw.textCenter(a.sub, cx, y + 22f, Draw.col(rgb, 0.9f * vis), 0.6f);
             }
-            y += bh + 4f;
+            y += bh + 8f;
         }
     }
 }

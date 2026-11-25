@@ -5,7 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 /** Client config (config/ironhud-client.toml, also editable from the mod list screen). */
 public final class HudConfig {
     public enum Theme {
-        ARC_BLUE(0x00E5FF, 0xFFC53D),
+        ARC_BLUE(0x3FD6FF, 0xFF5A4A),
         CLASSIC_GOLD(0xFFB300, 0xFF5A36),
         STEALTH_GREEN(0x39FF88, 0xFFC53D);
 
