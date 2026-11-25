@@ -8,8 +8,11 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
+import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent;
@@ -31,6 +34,15 @@ public class IronHudMod {
     public static final KeyMapping WAYPOINT = new KeyMapping("key.ironhud.waypoint", GLFW.GLFW_KEY_K, CAT);
     public static final KeyMapping SCAN = new KeyMapping("key.ironhud.scan", GLFW.GLFW_KEY_X, CAT);
 
+    public static final KeyMapping CHAT = new KeyMapping("key.ironhud.chat", GLFW.GLFW_KEY_M, CAT);
+    public static final KeyMapping PTT = new KeyMapping("key.ironhud.ptt", GLFW.GLFW_KEY_V, CAT);
+    public static final KeyMapping MULTI = new KeyMapping("key.ironhud.multilock", GLFW.GLFW_KEY_R, CAT);
+    public static final KeyMapping POWER = new KeyMapping("key.ironhud.power", GLFW.GLFW_KEY_P, CAT);
+    public static final KeyMapping DIAG = new KeyMapping("key.ironhud.diag", GLFW.GLFW_KEY_G, CAT);
+
+    private boolean pttWasDown = false;
+    private int pttStopTimer = -1;
+
     public IronHudMod(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.CLIENT, HudConfig.SPEC);
         container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
@@ -41,6 +53,9 @@ public class IronHudMod {
         NeoForge.EVENT_BUS.addListener(this::onGuiLayerPre);
         NeoForge.EVENT_BUS.addListener(this::onFov);
         NeoForge.EVENT_BUS.addListener(this::onScroll);
+        NeoForge.EVENT_BUS.addListener((ClientChatReceivedEvent.Player e) -> Comms.receive(e));
+        NeoForge.EVENT_BUS.addListener((RegisterClientCommandsEvent e) -> ModusCommands.register(e));
+        NeoForge.EVENT_BUS.addListener((ClientPlayerNetworkEvent.LoggingOut e) -> Modus.onLogout());
     }
 
     private void registerKeys(RegisterKeyMappingsEvent event) {
@@ -48,6 +63,11 @@ public class IronHudMod {
         event.register(ZOOM);
         event.register(WAYPOINT);
         event.register(SCAN);
+        event.register(CHAT);
+        event.register(PTT);
+        event.register(MULTI);
+        event.register(POWER);
+        event.register(DIAG);
     }
 
     private void registerLayers(RegisterGuiLayersEvent event) {
@@ -70,12 +90,38 @@ public class IronHudMod {
             while (WAYPOINT.consumeClick()) HudState.toggleWaypoint(mc);
             while (SCAN.consumeClick()) HudState.startScan();
             HudState.zoomHeld = ZOOM.isDown() && mc.screen == null;
+            while (MULTI.consumeClick()) {
+                HudState.multiLock = !HudState.multiLock;
+                SysLog.add(HudState.multiLock ? "MULTI-LOCK ENGAGED" : "MULTI-LOCK OFF");
+            }
+            while (POWER.consumeClick()) Power.cycle();
+            while (DIAG.consumeClick()) {
+                Diagnostics.open = !Diagnostics.open;
+                Diagnostics.openedAt = HudState.age;
+            }
         } else {
             while (WAYPOINT.consumeClick()) { /* swallow */ }
             while (SCAN.consumeClick()) { /* swallow */ }
             HudState.zoomHeld = false;
         }
+        while (CHAT.consumeClick()) {
+            if (mc.screen == null) mc.setScreen(new ModusChatScreen());
+        }
+        handlePtt(mc);
         HudState.tick(mc);
+    }
+
+    /** Push-to-talk: starts the recognizer on demand and stops it again if the mic is not set to always-on. */
+    private void handlePtt(Minecraft mc) {
+        boolean down = PTT.isDown() && mc.screen == null;
+        if (down && !pttWasDown && !Mic.isRunning()) {
+            if (Mic.installed()) Mic.start();
+            else Modus.sysLater("Voice input is not installed. Type /modus install");
+        }
+        Mic.setPushToTalk(down);
+        if (!down && pttWasDown && !HudConfig.MIC_ENABLED.get()) pttStopTimer = 50;
+        if (pttStopTimer > 0 && --pttStopTimer == 0) Mic.stop();
+        pttWasDown = down;
     }
 
     /** Hide the vanilla health / armor / hunger bars while the HUD replaces them. */
@@ -99,7 +145,7 @@ public class IronHudMod {
     }
 
     private void onScroll(InputEvent.MouseScrollingEvent event) {
-        if (HudState.enabled && HudState.zoomHeld) {
+        if (HudState.enabled && (HudState.zoomHeld || HudState.zoomLatched)) {
             HudState.adjustZoom(event.getScrollDeltaY());
             event.setCanceled(true);
         }

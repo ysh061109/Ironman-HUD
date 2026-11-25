@@ -56,22 +56,36 @@ public final class HudRenderer {
         Draw.begin(g, mc.font);
 
         screenFx(w, h, t, pri);
+        if (HudConfig.SHOW_HELMET.get()) Overlays.helmetFrame(w, h, pri);
         if (HudConfig.SHOW_CRACKS.get()) cracks(w, h, t);
         cornerBrackets(w, h, boot, pri);
         if (flying || HudConfig.HORIZON_ALWAYS.get()) horizon(cam, p, pt, w, h, pri, acc);
         scanPulse(w, h, pt, t, pri, acc);
         if (HudConfig.SHOW_MARKERS.get()) markers(cam, p, pt, t, w, h, pri, acc);
+        Overlays.multiLock(cam, pt, t, w, h, pri);
         TargetScan.render(cam, pt, t, w, h, pri, acc);
+        Overlays.hits(p, pt, w, h, t);
         if (HudConfig.SHOW_COMPASS.get()) compass(p, pt, w, t, boot, pri, acc);
         if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(h, t, boot, pri);
+        if (HudConfig.SHOW_WEAPONS.get()) WeaponPanel.render(p, 14f, h / 2f + 38f, t, boot, pri, acc);
         reactor(p, 58f, h - 58f, t, boot, pri);
         if (HudConfig.SHOW_RADAR.get()) radar(p, pt, w - 58f, h - 58f, t, boot, pri, acc);
+        if (HudConfig.SHOW_TERRAIN.get()) TerrainMap.render(p, pt, w - 142f, h - 196f, 130f, 80f, t, boot, pri, acc);
         infoPanel(p, level, w, t, boot, pri);
         reticle(w / 2f, h / 2f, t, boot, pri);
         collisionReadout(w / 2f, h / 2f, t, p);
         alertBanners(w, t);
+        if (HudConfig.SHOW_SYSLOG.get()) {
+            Overlays.sysLog(14f, 26f, boot, pri);
+            Overlays.modusPanel(w, h, pt, t, pri, acc);
+        }
+        Overlays.priorityList(14f, 78f, t, pri);
+        Comms.draw(w, h, t, pri, acc);
+        Diagnostics.draw(p, level, w, h, t, pri, acc);
+        Overlays.boot(w, h, pt, pri, acc);
 
         Draw.end(g);
+        Comms.drawFace(g, w, h);
         RenderSystem.enableCull();
     }
 
@@ -307,6 +321,19 @@ public final class HudRenderer {
             Draw.rect(lx + 14f, ly + 31f, lx + 14f + bw * Mth.clamp(air, 0f, 1f), ly + 36f,
                     Draw.col(air < 0.3f ? RED : pri, 0.9f));
         }
+        routing(lx, ly + 42f, boot, pri);
+    }
+
+    private static void routing(float lx, float ay, float boot, int pri) {
+        Draw.text("ROUTE " + Power.preset.label, lx, ay, Draw.col(pri, boot), 0.65f);
+        float[] sh = {Power.preset.sensors, Power.preset.optics, Power.preset.analysis};
+        String[] nm = {"SEN", "OPT", "ANL"};
+        for (int i = 0; i < 3; i++) {
+            float bx = lx + i * 27f;
+            Draw.rect(bx, ay + 9f, bx + 23f, ay + 12f, Draw.col(pri, 0.2f * boot));
+            Draw.rect(bx, ay + 9f, bx + 23f * Mth.clamp(sh[i] / 0.6f, 0f, 1f), ay + 12f, Draw.col(pri, 0.95f * boot));
+            Draw.text(nm[i], bx, ay + 13f, Draw.col(WHITE, 0.7f * boot), 0.5f);
+        }
     }
 
     /** 270-degree gauge, opening at the bottom. */
@@ -319,7 +346,7 @@ public final class HudRenderer {
 
     private static void radar(LocalPlayer p, float pt, float cx, float cy, float t, float boot, int pri, int acc) {
         float R = 44f * boot;
-        double range = HudConfig.RADAR_RANGE.get();
+        double range = HudState.radarRange();
         Draw.disc(cx, cy, R, Draw.col(0x000000, 0.28f));
         Draw.ring(cx, cy, R, 1.2f, Draw.col(pri, 0.8f));
         Draw.ring(cx, cy, R * 0.66f, 1f, Draw.col(pri, 0.28f));
@@ -415,6 +442,9 @@ public final class HudRenderer {
         int hours = (int) ((dayTime / 1000L + 6L) % 24L);
         int mins = (int) ((dayTime % 1000L) * 60L / 1000L);
         Draw.textRight(String.format(Locale.ROOT, "TIME %02d:%02d   FPS %d", hours, mins, Math.round(fps)), x, y, dim, s);
+        y += 10f;
+        String ms = Voice.isSpeaking() ? "SPEAKING" : Mic.isRunning() ? "LISTENING" : "ONLINE";
+        Draw.textRight("MODUS " + ms, x, y, Draw.col(Mic.isRunning() ? 0x39FF88 : pri, boot), s);
         y += 13f;
 
         // altitude trace
@@ -532,7 +562,7 @@ public final class HudRenderer {
         float since = HudState.age + pt - HudState.scanStart;
         boolean scanning = since >= 0f && since < 100f;
         float scanFade = 1f - Mth.clamp((since - 60f) / 40f, 0f, 1f);
-        double range = HudConfig.RADAR_RANGE.get();
+        double range = HudState.radarRange();
         int drawn = 0;
 
         for (Contact c : HudState.contacts) {

@@ -14,7 +14,9 @@ import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -45,6 +47,28 @@ public final class HudState {
     private static float lastHp = 20f;
     public static float hitFlash = 0f;
 
+    private static void registerHit(LocalPlayer p) {
+        double best = 1e9;
+        Vec3 dir = null;
+        for (Contact c : contacts) {
+            if (c.kind() == HOSTILE && c.dist() < 12 && c.dist() < best) {
+                best = c.dist();
+                dir = c.e().position().subtract(p.position());
+            }
+        }
+        for (Projectile pr : p.level().getEntitiesOfClass(Projectile.class, p.getBoundingBox().inflate(5.0))) {
+            double dd = pr.distanceTo(p);
+            if (dd < best) {
+                Entity owner = pr.getOwner();
+                best = dd;
+                dir = owner != null ? owner.position().subtract(p.position()) : pr.getDeltaMovement().reverse();
+            }
+        }
+        if (dir == null || dir.horizontalDistanceSqr() < 1.0e-4) return;
+        hits.add(new float[]{(float) Math.toDegrees(Math.atan2(-dir.x, dir.z)), age});
+        while (hits.size() > 6) hits.remove(0);
+    }
+
     // ----------------------------------------------------------------- armor
     public static final String[] PART = {"HELM", "CHEST", "LEGS", "BOOTS"};
     private static final EquipmentSlot[] SLOTS =
@@ -62,6 +86,52 @@ public final class HudState {
     public static final List<Contact> contacts = new ArrayList<>();
     public static int threats = 0;
     public static double nearestHostile = -1;
+
+    private static void computeLocks(LocalPlayer p, ClientLevel level) {
+        locks.clear();
+        if (!multiLock) {
+            lastLockCount = 0;
+            return;
+        }
+        Vec3 eye = p.getEyePosition();
+        Vec3 look = p.getViewVector(1.0F);
+        double range = scanRange();
+        List<Contact> cand = new ArrayList<>();
+        for (Contact c : contacts) {
+            if (c.kind() != HOSTILE || c.dist() > range) continue;
+            Vec3 ctr = c.e().getBoundingBox().getCenter();
+            Vec3 to = ctr.subtract(eye);
+            double d = to.length();
+            if (d < 1.0e-3 || to.dot(look) / d < 0.8) continue;
+            BlockHitResult bh = level.clip(new ClipContext(eye, ctr, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
+            if (bh.getType() == HitResult.Type.BLOCK && bh.getLocation().distanceToSqr(eye) < d * d - 1.0) continue;
+            cand.add(c);
+        }
+        cand.sort(Comparator.comparingDouble((Contact c) -> -(TargetScan.attack(c.e()) + c.e().getMaxHealth() * 0.15 + (range - c.dist()) * 0.1)));
+        int max = Power.maxLocks();
+        for (int i = 0; i < cand.size() && i < max; i++) locks.add(cand.get(i));
+        if (locks.size() > lastLockCount) {
+            Sfx.LOCK.play(1.0f + 0.1f * locks.size());
+            SysLog.add("MULTI-LOCK: " + locks.size() + " TARGETS");
+        }
+        lastLockCount = locks.size();
+    }
+
+    private static void sampleTerrain(LocalPlayer p, ClientLevel level) {
+        int half = (TN - 1) / 2;
+        terrainCx = (Mth.floor(p.getX()) / TSTEP) * TSTEP;
+        terrainCz = (Mth.floor(p.getZ()) / TSTEP) * TSTEP;
+        for (int i = 0; i < TN; i++) {
+            for (int j = 0; j < TN; j++) {
+                int x = terrainCx + (i - half) * TSTEP, z = terrainCz + (j - half) * TSTEP;
+                if (!level.getChunkSource().hasChunk(x >> 4, z >> 4)) {
+                    terrain[i][j] = Float.NaN;
+                } else {
+                    terrain[i][j] = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                }
+            }
+        }
+    }
 
     // ---------------------------------------------------------------- target
     public static boolean hasTarget = false;
@@ -92,8 +162,31 @@ public final class HudState {
     public static float zoomTarget = 3f, zoomCur = 1f;
     public static int scanStart = -1000;
     public static Vec3 waypoint = null;
+    public static boolean zoomLatched = false;
+    public static boolean multiLock = false;
+    public static final List<Contact> locks = new ArrayList<>();
+    private static int lastLockCount = 0;
+    public static final List<float[]> hits = new ArrayList<>();
+
+    // ------------------------------------------------------------ terrain grid
+    public static final int TN = 21, TSTEP = 2;
+    public static final float[][] terrain = new float[TN][TN];
+    public static int terrainCx, terrainCz;
 
     private HudState() {}
+
+    /** Radar / lock range after power routing. */
+    public static int radarRange() {
+        return Math.min(96, Math.round(HudConfig.RADAR_RANGE.get() * Power.sensorsMul()));
+    }
+
+    public static int scanRange() {
+        return Math.min(160, Math.round(HudConfig.SCAN_RANGE.get() * Power.sensorsMul()));
+    }
+
+    public static float zoomMax() {
+        return Mth.clamp(HudConfig.ZOOM_MAX.get().floatValue() * Power.opticsMul(), 2f, 24f);
+    }
 
     public static boolean active(Minecraft mc) {
         return enabled && mc.player != null && mc.level != null
@@ -122,7 +215,10 @@ public final class HudState {
         if (age % 4 == 0) scanContacts(p, level);
         scanTarget(p, level);
         motion(p, level);
+        if (age % 10 == 0) sampleTerrain(p, level);
         zoom();
+        hits.removeIf(h -> age - h[1] > 60f);
+        if (age == scanStart + 42) Modus.afterScan(threats, contacts.size());
 
         if (age == 1) {
             Alerts.fire("boot", "SUIT SYSTEMS ONLINE", "ALL MODULES NOMINAL", Level.INFO, 60, 0, Sfx.BOOT);
@@ -152,6 +248,11 @@ public final class HudState {
         java.util.Arrays.fill(altHist, (float) p.getY());
         Alerts.clear();
         Cracks.clear();
+        SysLog.clear();
+        hits.clear();
+        locks.clear();
+        lastLockCount = 0;
+        Modus.onWorldJoin(p);
     }
 
     // ---------------------------------------------------------------- vitals
@@ -164,6 +265,7 @@ public final class HudState {
         if (hp < lastHp - 0.01f) {
             float d = lastHp - hp;
             hitFlash = Math.min(1f, 0.35f + d / 8f);
+            registerHit(p);
             if (d >= 3f && HudConfig.SHOW_CRACKS.get()) Cracks.add(d / 6f, false);
             if (d >= 6f) {
                 Alerts.fire("bighit", "MAJOR IMPACT",
@@ -262,7 +364,7 @@ public final class HudState {
     // -------------------------------------------------------------- contacts
 
     private static void scanContacts(LocalPlayer p, ClientLevel level) {
-        double range = Math.max(HudConfig.RADAR_RANGE.get(), 32);
+        double range = Math.max(radarRange(), 32);
         AABB box = p.getBoundingBox().inflate(range);
         List<LivingEntity> found = level.getEntitiesOfClass(LivingEntity.class, box,
                 e -> e != p && e.isAlive() && !(e instanceof ArmorStand));
@@ -288,6 +390,7 @@ public final class HudState {
             if (c.e() instanceof Creeper cr && cr.getSwellDir() > 0 && c.dist() < 10) ignite = true;
         }
         threats = n;
+        computeLocks(p, level);
         if (ignite) {
             Alerts.fire("creeper", "EXPLOSIVE IGNITION", "DETONATION IMMINENT", Level.CRIT, 40, 30, Sfx.CRITICAL);
         } else if (nearestHostile >= 0 && nearestHostile < 6) {
@@ -299,7 +402,7 @@ public final class HudState {
     // ---------------------------------------------------------------- target
 
     private static void scanTarget(LocalPlayer p, ClientLevel level) {
-        double range = HudConfig.SCAN_RANGE.get();
+        double range = scanRange();
         Vec3 eye = p.getEyePosition();
         Vec3 look = p.getViewVector(1.0F);
         Vec3 end = eye.add(look.scale(range));
@@ -328,7 +431,11 @@ public final class HudState {
             lockTicks = isNew ? 0 : lockTicks + 1;
             targetId = e.getId();
             targetEntity = le;
-            if (isNew && targetHostile && !targetDead) Sfx.LOCK.play();
+            if (isNew && targetHostile && !targetDead) {
+                Sfx.LOCK.play();
+                Modus.onNewTarget(le);
+                SysLog.add("TARGET ACQUIRED: " + targetName.toUpperCase(java.util.Locale.ROOT));
+            }
             if (targetDead && targetHostile && e.getId() != lastKillId) {
                 lastKillId = e.getId();
                 kills++;
@@ -406,13 +513,13 @@ public final class HudState {
     // ------------------------------------------------------------------ zoom
 
     private static void zoom() {
-        float goal = zoomHeld ? zoomTarget : 1f;
+        float goal = (zoomHeld || zoomLatched) ? zoomTarget : 1f;
         zoomCur += (goal - zoomCur) * 0.35f;
         if (Math.abs(goal - zoomCur) < 0.005f) zoomCur = goal;
     }
 
     public static void adjustZoom(double scroll) {
-        float max = HudConfig.ZOOM_MAX.get().floatValue();
+        float max = zoomMax();
         float next = Mth.clamp(zoomTarget * (scroll > 0 ? 1.25f : 0.8f), 1.5f, max);
         if (Math.abs(next - zoomTarget) > 0.001f) {
             zoomTarget = next;
@@ -426,7 +533,7 @@ public final class HudState {
         if (age - scanStart < 100) return;
         scanStart = age;
         Sfx.PING.play(0.7f);
-        Alerts.fire("scan", "WIDE-AREA SCAN", "SWEEPING " + HudConfig.RADAR_RANGE.get() + " M",
+        Alerts.fire("scan", "WIDE-AREA SCAN", "SWEEPING " + radarRange() + " M",
                 Level.INFO, 40, 0, null);
     }
 

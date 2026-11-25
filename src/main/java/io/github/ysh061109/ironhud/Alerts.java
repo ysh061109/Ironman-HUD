@@ -56,6 +56,8 @@ public final class Alerts {
         ACTIVE.removeIf(a -> a.key.equals(key));
         ACTIVE.add(new Alert(key, title, sub, level, now, now + duration));
         if (sound != null) sound.play();
+        SysLog.add(sub.isEmpty() ? title : title + " - " + sub);
+        Modus.onAlert(key, title, sub, level);
     }
 
     /** Refreshes a banner that is still true (no sound, no cooldown). */

@@ -1,0 +1,26 @@
+package io.github.ysh061109.ironhud;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/** Rolling "system log" lines shown top-left. */
+public final class SysLog {
+    public record Entry(String text, int born) {}
+
+    private static final List<Entry> LINES = new ArrayList<>();
+
+    private SysLog() {}
+
+    public static void add(String text) {
+        LINES.add(new Entry(text, HudState.age));
+        while (LINES.size() > 6) LINES.remove(0);
+    }
+
+    public static void clear() {
+        LINES.clear();
+    }
+
+    public static List<Entry> all() {
+        return LINES;
+    }
+}

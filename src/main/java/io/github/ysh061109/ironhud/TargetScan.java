@@ -183,6 +183,10 @@ public final class TargetScan {
 
     // ---------------------------------------------------------------- data
 
+    public static double attack(LivingEntity e) {
+        return e.getAttributes().hasAttribute(Attributes.ATTACK_DAMAGE) ? e.getAttributeValue(Attributes.ATTACK_DAMAGE) : 0.0;
+    }
+
     private static String up(String s) {
         return s.replace('_', ' ').toUpperCase(Locale.ROOT);
     }
@@ -211,8 +215,7 @@ public final class TargetScan {
         out.add(new Line(String.format(Locale.ROOT, "%s%.0f/%.0f", pad("HEALTH"), hp, max), sec, true,
                 Mth.clamp(hp / max, 0f, 1f)));
 
-        double atk = e.getAttributes().hasAttribute(Attributes.ATTACK_DAMAGE)
-                ? e.getAttributeValue(Attributes.ATTACK_DAMAGE) : 0.0;
+        double atk = attack(e);
         out.add(new Line(String.format(Locale.ROOT, "%s%d   ATK %.1f", pad("ARMOR"), e.getArmorValue(), atk),
                 white, false, 0));
 
