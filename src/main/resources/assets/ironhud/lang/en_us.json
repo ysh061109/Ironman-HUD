@@ -1,6 +1,6 @@
 {
   "key.categories.ironhud": "Iron HUD",
-  "key.ironhud.toggle": "Toggle HUD",
+  "key.ironhud.toggle": "Suit HUD on/off (back to vanilla UI)",
   "key.ironhud.zoom": "Optical zoom (hold, scroll to adjust)",
   "key.ironhud.waypoint": "Set / clear waypoint",
   "key.ironhud.scan": "Wide-area scan pulse",

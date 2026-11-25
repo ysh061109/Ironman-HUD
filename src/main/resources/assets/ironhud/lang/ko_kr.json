@@ -1,6 +1,6 @@
 {
   "key.categories.ironhud": "아이언 HUD",
-  "key.ironhud.toggle": "HUD 켜기/끄기",
+  "key.ironhud.toggle": "슈트 HUD 켜기/끄기 (마크 기본 UI 복귀)",
   "key.ironhud.zoom": "광학 줌 (누르고 있기, 휠로 조절)",
   "key.ironhud.waypoint": "웨이포인트 설정/해제",
   "key.ironhud.scan": "광역 스캔 펄스",

@@ -48,5 +48,55 @@
     "sounds": [
       "ironhud:ping"
     ]
+  },
+  "engage": {
+    "sounds": [
+      "ironhud:engage"
+    ]
+  },
+  "scan_sweep": {
+    "sounds": [
+      "ironhud:scan_sweep"
+    ]
+  },
+  "sonar": {
+    "sounds": [
+      "ironhud:sonar"
+    ]
+  },
+  "blip": {
+    "sounds": [
+      "ironhud:blip"
+    ]
+  },
+  "servo": {
+    "sounds": [
+      "ironhud:servo"
+    ]
+  },
+  "swish": {
+    "sounds": [
+      "ironhud:swish"
+    ]
+  },
+  "lock_engage": {
+    "sounds": [
+      "ironhud:lock_engage"
+    ]
+  },
+  "holo": {
+    "sounds": [
+      "ironhud:holo"
+    ]
+  },
+  "terrain_pulse": {
+    "sounds": [
+      "ironhud:terrain_pulse"
+    ]
+  },
+  "acquire": {
+    "sounds": [
+      "ironhud:acquire"
+    ]
   }
 }

@@ -19,7 +19,17 @@ public enum Sfx {
     KILL("kill"),
     TICK("tick"),
     COLLISION("collision"),
-    PING("ping");
+    PING("ping"),
+    ENGAGE("engage"),
+    SCAN_SWEEP("scan_sweep"),
+    SONAR("sonar"),
+    BLIP("blip"),
+    SERVO("servo"),
+    SWISH("swish"),
+    LOCK_ENGAGE("lock_engage"),
+    HOLO("holo"),
+    TERRAIN_PULSE("terrain_pulse"),
+    ACQUIRE("acquire");
 
     private final SoundEvent event;
 

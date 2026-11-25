@@ -401,8 +401,7 @@ public final class Modus {
             HudState.multiLock = flip(onOff(s), HudState.multiLock);
             say(HudState.multiLock ? LOCK_ON : LOCK_OFF, false);
         } else if (has(s, "hud") && onOff(s) != null) {
-            HudState.enabled = onOff(s);
-            if (HudState.enabled) HudState.age = 0;
+            HudState.setEnabled(onOff(s));
             say(HudState.enabled ? HUD_ON : HUD_OFF, false);
         } else if (has(s, "radar", "레이더")) {
             HudConfig.SHOW_RADAR.set(flip(onOff(s), HudConfig.SHOW_RADAR.get()));

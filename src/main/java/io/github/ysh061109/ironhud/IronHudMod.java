@@ -81,20 +81,18 @@ public class IronHudMod {
         if (mc.player == null) return;
 
         while (TOGGLE.consumeClick()) {
-            HudState.enabled = !HudState.enabled;
-            if (HudState.enabled) {
-                HudState.age = 0; // replay the boot sequence
-            } else {
-                Sfx.POWER_DOWN.play();
-            }
+            HudState.setEnabled(!HudState.enabled); // off = visor shutters close, vanilla UI returns
         }
         if (HudState.enabled) {
             while (WAYPOINT.consumeClick()) HudState.toggleWaypoint(mc);
             while (SCAN.consumeClick()) HudState.startScan();
-            HudState.zoomHeld = ZOOM.isDown() && mc.screen == null;
+            boolean zh = ZOOM.isDown() && mc.screen == null;
+            if (zh && !HudState.zoomHeld) Sfx.SERVO.play();
+            HudState.zoomHeld = zh;
             while (MULTI.consumeClick()) {
                 HudState.multiLock = !HudState.multiLock;
                 if (HudState.multiLock) {
+                    Sfx.LOCK_ENGAGE.play();
                     HudState.startScan(); // scan sweep, then every hostile in range stays marked
                     SysLog.add("TACTICAL LOCK ENGAGED");
                 } else {
@@ -104,6 +102,7 @@ public class IronHudMod {
             while (POWER.consumeClick()) Power.cycle();
             while (DIAG.consumeClick()) {
                 Diagnostics.open = !Diagnostics.open;
+                Sfx.SWISH.play(Diagnostics.open ? 1f : 0.8f);
                 Diagnostics.openedAt = HudState.age;
             }
         } else {
@@ -112,7 +111,10 @@ public class IronHudMod {
             HudState.zoomHeld = false;
         }
         while (CHAT.consumeClick()) {
-            if (mc.screen == null) mc.setScreen(new ModusChatScreen());
+            if (mc.screen == null) {
+                Sfx.SWISH.play(1.15f);
+                mc.setScreen(new ModusChatScreen());
+            }
         }
         handlePtt(mc);
         HudState.tick(mc);

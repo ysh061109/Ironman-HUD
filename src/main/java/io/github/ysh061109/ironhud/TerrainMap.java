@@ -42,8 +42,11 @@ public final class TerrainMap {
                 PX[i][j] = cx + r * scale;
                 PY[i][j] = cy - f * scale * 0.42f - dy * 1.1f;
                 DEPTH[i][j] = f;
+                DIST[i][j] = (float) Math.sqrt(dx * dx + dz * dz);
             }
         }
+        float since = HudState.age + pt - HudState.scanStart;
+        curR = since >= 0f && since < 40f ? ScanWave.radius(since) : 1.0e9f;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
                 if (Float.isNaN(PX[i][j])) continue;
@@ -88,16 +91,24 @@ public final class TerrainMap {
         Draw.line(cx - 3f, cy + 2f, cx + 3f, cy + 2f, 1.2f, Draw.col(0xDFF9FF, boot));
     }
 
+    private static final float[][] DIST = new float[HudState.TN][HudState.TN];
+    private static float curR = 1.0e9f;
+
     private static void seg(int i0, int j0, int i1, int j1, float x0, float y0, float x1, float y1,
                             float boot, int pri, int acc) {
         if (Float.isNaN(PX[i1][j1])) return;
         float ax = PX[i0][j0], ay = PY[i0][j0], bx = PX[i1][j1], by = PY[i1][j1];
         if (ax < x0 || ax > x1 || bx < x0 || bx > x1 || ay < y0 || ay > y1 || by < y0 || by > y1) return;
         float depth = (DEPTH[i0][j0] + DEPTH[i1][j1]) * 0.5f;
-        float a = Mth.clamp(0.62f - depth / 60f, 0.15f, 0.7f) * boot;
+        float dist = (DIST[i0][j0] + DIST[i1][j1]) * 0.5f;
+        float behind = curR - dist;
+        if (behind <= 0f) return;
+        float flash = Mth.clamp(1f - behind / 8f, 0f, 1f);
+        float a = Mth.clamp(0.62f - depth / 60f, 0.15f, 0.7f) * boot * Mth.clamp(behind / 4f, 0f, 1f);
+        a = Math.min(1f, a + flash * 0.4f);
         boolean high = (HudState.terrain[i0][j0] + HudState.terrain[i1][j1]) * 0.5f
                 > Minecraft_playerY() + 3f;
-        Draw.line(ax, ay, bx, by, 1f, Draw.col(high ? acc : pri, a));
+        Draw.line(ax, ay, bx, by, 1f, Draw.col(flash > 0.7f ? 0xFFFFFF : high ? acc : pri, a));
     }
 
     private static float Minecraft_playerY() {

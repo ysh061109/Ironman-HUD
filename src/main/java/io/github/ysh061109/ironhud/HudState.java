@@ -39,6 +39,27 @@ public final class HudState {
 
     // ------------------------------------------------------------- lifecycle
     public static boolean enabled = true;
+    /** Tick at which the HUD was switched off; the visor shutters close over {@link #SHUTTER} ticks. */
+    public static int offAt = -1000;
+    public static final int SHUTTER = 16;
+
+    public static void setEnabled(boolean on) {
+        if (on == enabled) return;
+        enabled = on;
+        if (on) {
+            age = 0;
+            Sfx.ENGAGE.play();
+        } else {
+            offAt = age;
+            Sfx.POWER_DOWN.play();
+        }
+    }
+
+    /** 1 while on, 0..1 while the shutters close, 0 once the vanilla UI is back. */
+    public static float shutter(float pt) {
+        if (enabled) return 1f;
+        return Mth.clamp(1f - (age + pt - offAt) / SHUTTER, 0f, 1f);
+    }
     public static int age = 0;
     private static LocalPlayer lastPlayer;
 
@@ -122,6 +143,24 @@ public final class HudState {
                 }
             }
         }
+        // soften single-block noise (not across cliffs) so the panel relief reads as terrain, not static
+        float[][] src = new float[TN][TN];
+        for (int i = 0; i < TN; i++) src[i] = terrain[i].clone();
+        for (int i = 1; i < TN - 1; i++) {
+            for (int j = 1; j < TN - 1; j++) {
+                if (Float.isNaN(src[i][j])) continue;
+                float s = src[i][j] * 0.5f, wsum = 0.5f;
+                for (int di = -1; di <= 1; di++) {
+                    for (int dj = -1; dj <= 1; dj++) {
+                        if ((di | dj) == 0 || Float.isNaN(src[i + di][j + dj])) continue;
+                        float k = Math.abs(src[i + di][j + dj] - src[i][j]) > 3f ? 0f : 0.0625f;
+                        s += src[i + di][j + dj] * k;
+                        wsum += k;
+                    }
+                }
+                terrain[i][j] = s / wsum;
+            }
+        }
     }
 
     // ---------------------------------------------------------------- target
@@ -183,7 +222,7 @@ public final class HudState {
     }
 
     public static boolean active(Minecraft mc) {
-        return enabled && mc.player != null && mc.level != null
+        return (enabled || age - offAt < SHUTTER) && mc.player != null && mc.level != null
                 && !mc.options.hideGui && !mc.player.isSpectator();
     }
 
@@ -213,6 +252,8 @@ public final class HudState {
         zoom();
         hits.removeIf(h -> age - h[1] > 60f);
         if (age == scanStart + 42) Modus.afterScan(threats, contacts.size());
+        scanSounds();
+        if (age == 12) Sfx.HOLO.play();
 
         if (age == 1) {
             Alerts.fire("boot", "SUIT SYSTEMS ONLINE", "ALL MODULES NOMINAL", Level.INFO, 60, 0, Sfx.BOOT);
@@ -447,7 +488,7 @@ public final class HudState {
             targetEntity = le;
             if (isNew && targetHostile && !targetDead && age - lastAcquireAge > 60) {
                 lastAcquireAge = age;
-                Sfx.LOCK.play();
+                Sfx.ACQUIRE.play();
                 Modus.onNewTarget(le);
             }
         } else {
@@ -544,10 +585,27 @@ public final class HudState {
 
     // ------------------------------------------------------------------ misc
 
+    /** Blips as the scan wave passes each contact, a pulse when it first touches relief, a sonar tone when done. */
+    private static void scanSounds() {
+        int since = age - scanStart;
+        if (since < 0 || since > 130) return;
+        float r1 = ScanWave.radius(since), r0 = ScanWave.radius(since - 1);
+        if (since == 6) Sfx.TERRAIN_PULSE.play();
+        int n = 0;
+        for (Contact c : contacts) {
+            if (c.dist() > r0 && c.dist() <= r1 && n++ < 1) {
+                Sfx.BLIP.play(c.kind() == HOSTILE ? 0.8f : 1.25f);
+            }
+        }
+        if (r1 >= radarRange() + 4f && r0 < radarRange() + 4f) Sfx.SONAR.play(0.9f);
+    }
+
     public static void startScan() {
         if (age - scanStart < 100) return;
         scanStart = age;
-        Sfx.PING.play(0.7f);
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null && mc.level != null) ScanWave.capture(mc.player, mc.level);
+        Sfx.SCAN_SWEEP.play();
         Alerts.fire("scan", "WIDE-AREA SCAN", "SWEEPING " + radarRange() + " M",
                 Level.INFO, 40, 0, null);
     }

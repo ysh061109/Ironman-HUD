@@ -41,7 +41,8 @@ public final class HudRenderer {
 
         float pt = dt.getGameTimeDeltaPartialTick(true);
         float t = HudState.age + pt;
-        float boot = Mth.clamp(t / 40f, 0f, 1f);
+        float sh = HudState.shutter(pt);
+        float boot = Mth.clamp(t / 40f, 0f, 1f) * sh;
         updateFps();
 
         int w = g.guiWidth(), h = g.guiHeight();
@@ -61,6 +62,7 @@ public final class HudRenderer {
         if (HudConfig.SHOW_CRACKS.get()) cracks(w, h, t);
         cornerBrackets(w, h, boot, pri);
         if (flying || HudConfig.HORIZON_ALWAYS.get()) horizon(cam, p, pt, w, h, pri, acc);
+        ScanWave.render(cam, pt, t, pri, acc);
         scanPulse(w, h, pt, t, pri, acc);
         if (HudConfig.SHOW_MARKERS.get()) markers(cam, p, pt, t, w, h, pri, acc);
         Overlays.multiLock(cam, pt, t, w, h, pri);
@@ -72,7 +74,7 @@ public final class HudRenderer {
         // ---- left column: log, hull lamp, suit status, reactor
         if (HudConfig.SHOW_SYSLOG.get()) Overlays.sysLog(14f, 36f, boot, pri);
         FilmStyle.hullLamp(p, 14f, 62f, t, boot, pri, RED);
-        if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(96f, t, boot, pri);
+        if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(96f, t, boot, pri, h, p);
         reactor(p, 50f, h - 48f, t, boot, pri);
 
         // ---- right column: stacked from the top, below any minimap, stopping above the radar
@@ -106,10 +108,20 @@ public final class HudRenderer {
         Overlays.boot(w, h, pt, pri, acc);
 
         HudUi.hotbarFrame(mc, w, h, t, boot, pri, acc);
+        if (sh < 1f) visorShutters(w, h, sh, pri);
         Draw.end(g);
         HudUi.hotbarItems(g, mc, w, h);
         Comms.drawFace(g, w, h);
         RenderSystem.enableCull();
+    }
+
+    /** Power-down animation: two shutters close from the top and bottom, then the vanilla UI returns. */
+    private static void visorShutters(int w, int h, float sh, int pri) {
+        float cover = (1f - sh) * h * 0.5f;
+        Draw.rect(0, 0, w, cover, Draw.col(pri, 0.30f * sh + 0.1f));
+        Draw.rect(0, h - cover, w, h, Draw.col(pri, 0.30f * sh + 0.1f));
+        Draw.rect(0, cover - 1f, w, cover + 1f, Draw.col(0xFFFFFF, 0.8f * sh));
+        Draw.rect(0, h - cover - 1f, w, h - cover + 1f, Draw.col(0xFFFFFF, 0.8f * sh));
     }
 
     private static void updateFps() {
@@ -243,7 +255,7 @@ public final class HudRenderer {
 
     // ----------------------------------------------------------- suit status
 
-    private static int partColor(int i, float t, int pri) {
+    static int partColor(int i, float t, int pri) {
         if (!HudState.armorPresent[i]) return GRAY;
         float pct = HudState.armorPct[i];
         if (HudState.armorFlash[i] > 0) return 0xFFFFFF;
@@ -252,56 +264,20 @@ public final class HudRenderer {
         return RED;
     }
 
-    private static float partAlpha(int i, float t) {
+    static float partAlpha(int i, float t) {
         if (!HudState.armorPresent[i]) return 0.35f;
         if (HudState.armorFlash[i] > 0) return 0.95f;
         if (HudState.armorPct[i] < 0.3f) return 0.45f + 0.5f * pulse(t, 0.6f);
         return 0.85f;
     }
 
-    private static void suitStatus(float y0, float t, float boot, int pri) {
+    private static void suitStatus(float y0, float t, float boot, int pri, int h, LocalPlayer p) {
         float x0 = 14f;
-        Draw.text("SUIT STATUS", x0, y0 - 14f, Draw.col(pri, boot), 0.8f);
-        Draw.line(x0, y0 - 4f, x0 + 90f * boot, y0 - 4f, 1f, Draw.col(pri, 0.6f));
-
-        // head
-        int c0 = partColor(0, t, pri);
-        float a0 = partAlpha(0, t) * boot;
-        Draw.disc(x0 + 22f, y0 + 8f, 6f, Draw.col(c0, 0.28f * a0));
-        Draw.ring(x0 + 22f, y0 + 8f, 6.5f, 1.2f, Draw.col(c0, a0));
-
-        // chest + arms
-        int c1 = partColor(1, t, pri);
-        float a1 = partAlpha(1, t) * boot;
-        Draw.box(x0 + 11f, y0 + 17f, 22f, 26f, c1, 0.28f * a1, a1);
-        Draw.box(x0 + 1f, y0 + 17f, 8f, 22f, c1, 0.22f * a1, a1);
-        Draw.box(x0 + 35f, y0 + 17f, 8f, 22f, c1, 0.22f * a1, a1);
-
-        // legs
-        int c2 = partColor(2, t, pri);
-        float a2 = partAlpha(2, t) * boot;
-        Draw.box(x0 + 11f, y0 + 45f, 10f, 26f, c2, 0.28f * a2, a2);
-        Draw.box(x0 + 23f, y0 + 45f, 10f, 26f, c2, 0.28f * a2, a2);
-
-        // boots
-        int c3 = partColor(3, t, pri);
-        float a3 = partAlpha(3, t) * boot;
-        Draw.box(x0 + 10f, y0 + 73f, 11f, 8f, c3, 0.28f * a3, a3);
-        Draw.box(x0 + 23f, y0 + 73f, 11f, 8f, c3, 0.28f * a3, a3);
-
-        // labels
-        float lx = x0 + 50f;
-        float[] ly = {y0 + 3f, y0 + 24f, y0 + 54f, y0 + 73f};
-        for (int i = 0; i < 4; i++) {
-            String s;
-            if (!HudState.armorPresent[i]) s = HudState.PART[i] + " --";
-            else if (i == 1 && HudState.hasThrusters && HudState.armorPct[i] >= 0f
-                    && Minecraft.getInstance().player.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.CHEST)
-                    .is(net.minecraft.world.item.Items.ELYTRA)) {
-                s = "THRUST " + Math.round(HudState.armorPct[i] * 100f) + "%";
-            } else s = HudState.PART[i] + " " + Math.round(HudState.armorPct[i] * 100f) + "%";
-            Draw.text(s, lx, ly[i], Draw.col(partColor(i, t, pri), 0.95f * boot), 0.7f);
-        }
+        Draw.text("SUIT STATUS", x0, y0 - 8f, Draw.col(pri, boot), 0.8f);
+        Draw.line(x0, y0 + 2f, x0 + 110f * boot, y0 + 2f, 1f, Draw.col(pri, 0.6f));
+        float top = y0 + 6f;
+        float hh = Mth.clamp(h - 100f - top, 60f, 130f);
+        SuitHologram.render(p, x0, top, hh, t, boot, pri);
     }
 
     // --------------------------------------------------------------- reactor
