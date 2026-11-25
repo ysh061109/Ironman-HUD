@@ -18,30 +18,77 @@ public final class FilmStyle {
 
     private FilmStyle() {}
 
-    private static final String[] LABELS = {"HP", "AR", "FD", "O2", "SP", "XP"};
+    private static final String[] LABELS = {"SUIT", "OPTICS", "RADAR", "HORIZON", "MAP"};
 
-    /** Six round gauges centered at the bottom edge, present in almost every film frame. */
+    /**
+     * The five persistent round icons along the bottom of the film HUD: suit status, targeting and
+     * optics, radar, artificial horizon and map. Each one shows a live value as an arc.
+     */
     public static void gaugeRow(LocalPlayer p, int w, int h, float t, float boot, int pri, int warn) {
-        float[] f = new float[6];
-        f[0] = Mth.clamp(p.getHealth() / Math.max(1f, p.getMaxHealth()), 0f, 1f);
-        f[1] = Mth.clamp(p.getArmorValue() / 20f, 0f, 1f);
-        f[2] = Mth.clamp(p.getFoodData().getFoodLevel() / 20f, 0f, 1f);
-        f[3] = Mth.clamp(p.getAirSupply() / (float) Math.max(1, p.getMaxAirSupply()), 0f, 1f);
-        f[4] = Mth.clamp(HudState.speed / (p.isFallFlying() ? 40f : 8f), 0f, 1f);
-        f[5] = Mth.clamp(p.experienceProgress, 0f, 1f);
-        float r = 9f, gap = 30f, y = h - 16f;
-        float x0 = w / 2f - gap * 2.5f;
-        for (int i = 0; i < 6; i++) {
+        float armor = 0f;
+        int n = 0;
+        for (int i = 0; i < 4; i++) if (HudState.armorPresent[i]) {
+            armor += Mth.clamp(HudState.armorPct[i], 0f, 1f);
+            n++;
+        }
+        armor = n == 0 ? 0f : armor / n;
+        int hostiles = 0;
+        for (HudState.Contact c : HudState.contacts) if (c.kind() == HudState.HOSTILE) hostiles++;
+        float[] f = new float[5];
+        f[0] = armor;
+        f[1] = Mth.clamp((HudState.zoomCur - 1f) / Math.max(0.1f, HudConfig.ZOOM_MAX.get().floatValue() - 1f), 0f, 1f);
+        f[2] = Mth.clamp(hostiles / 8f, 0f, 1f);
+        f[3] = Mth.clamp((p.getXRot() + 90f) / 180f, 0f, 1f);
+        f[4] = HudState.waypoint != null ? 1f : 0f;
+        boolean[] lit = {armor < 0.3f && n > 0, HudState.hasTarget || HudState.zoomCur > 1.05f, hostiles > 0,
+                p.isFallFlying(), HudState.waypoint != null};
+        float r = 10.5f, gap = 36f, y = h - 27f;
+        float x0 = w / 2f - gap * 2f;
+        for (int i = 0; i < 5; i++) {
             float x = x0 + i * gap;
-            float s = Mth.clamp(boot * 6f - i * 0.6f, 0f, 1f);
+            float s = Mth.clamp(boot * 6f - i * 0.7f, 0f, 1f);
             if (s <= 0f) continue;
-            boolean low = f[i] < 0.25f && i < 4;
-            int rgb = low ? warn : pri;
-            float a = s * (low ? 0.65f + 0.35f * (float) Math.sin(t * 0.6f) : 1f);
-            Draw.ring(x, y, r, 1f, Draw.col(rgb, 0.35f * a));
-            Draw.arc(x, y, r - 1.5f, r + 0.5f, -90f, 360f * f[i], Draw.col(rgb, a));
-            Draw.dashedRing(x, y, r + 3.5f, 0.8f, t * (i % 2 == 0 ? 1.5f : -1.5f), 12, Draw.col(pri, 0.25f * s));
-            Draw.textCenter(LABELS[i], x, y - 3f, Draw.col(0xDFF9FF, 0.85f * s), 0.5f);
+            boolean alert = (i == 0 && lit[0]) || (i == 2 && lit[2]);
+            int rgb = alert ? warn : pri;
+            float a = s * (alert ? 0.7f + 0.3f * (float) Math.sin(t * 0.6f) : 1f);
+            float glow = lit[i] ? 1f : 0.55f;
+            Draw.ring(x, y, r, 1f, Draw.col(rgb, 0.4f * a * glow));
+            Draw.arc(x, y, r + 1.5f, r + 3f, -90f, Math.max(8f, 360f * f[i]), Draw.col(rgb, 0.85f * a * glow));
+            Draw.dashedRing(x, y, r + 5.5f, 0.8f, t * (i % 2 == 0 ? 1.5f : -1.5f), 14, Draw.col(pri, 0.22f * s));
+            int ic = Draw.col(rgb, a * glow);
+            switch (i) {
+                case 0 -> { // suit: tiny figure
+                    Draw.disc(x, y - 5f, 2f, ic);
+                    Draw.rect(x - 3f, y - 2f, x + 3f, y + 3f, ic);
+                    Draw.rect(x - 2.5f, y + 3.5f, x - 0.8f, y + 7f, ic);
+                    Draw.rect(x + 0.8f, y + 3.5f, x + 2.5f, y + 7f, ic);
+                }
+                case 1 -> { // optics: reticle
+                    Draw.ring(x, y, 4f, 1f, ic);
+                    Draw.line(x - 8f, y, x - 2f, y, 1f, ic);
+                    Draw.line(x + 2f, y, x + 8f, y, 1f, ic);
+                    Draw.line(x, y - 8f, x, y - 2f, 1f, ic);
+                    Draw.line(x, y + 2f, x, y + 8f, 1f, ic);
+                }
+                case 2 -> { // radar: rings + sweep
+                    Draw.ring(x, y, 3f, 1f, ic);
+                    Draw.ring(x, y, 6f, 1f, Draw.col(rgb, 0.6f * a));
+                    float sw = t * 0.12f;
+                    Draw.line(x, y, x + (float) Math.cos(sw) * 7f, y + (float) Math.sin(sw) * 7f, 1f, ic);
+                }
+                case 3 -> { // horizon: tilted line offset by pitch
+                    float off = Mth.clamp(p.getXRot() / 90f, -1f, 1f) * 5f;
+                    Draw.line(x - 7f, y + off, x + 7f, y + off, 1.2f, ic);
+                    Draw.line(x - 3f, y - 1.5f, x + 3f, y - 1.5f, 1f, Draw.col(rgb, 0.6f * a));
+                }
+                default -> { // map: grid + marker
+                    Draw.box(x - 6f, y - 6f, 12f, 12f, rgb, 0f, a * glow);
+                    Draw.line(x - 6f, y, x + 6f, y, 1f, Draw.col(rgb, 0.5f * a));
+                    Draw.line(x, y - 6f, x, y + 6f, 1f, Draw.col(rgb, 0.5f * a));
+                    Draw.disc(x + 2f, y - 2f, 1.5f, ic);
+                }
+            }
+            Draw.textCenter(LABELS[i], x, y + r + 6f, Draw.col(0xDFF9FF, 0.55f * s), 0.4f);
         }
     }
 
