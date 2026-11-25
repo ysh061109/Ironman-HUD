@@ -37,6 +37,33 @@ NeoForge **1.21.1** 클라이언트 전용 모드 — 영화 속 파워슈트 HU
 설정은 모드 목록 > Iron HUD > 설정 화면 또는 `config/ironhud-client.toml`에서 바꿀 수 있습니다
 (색상 테마, 효과음/볼륨, 각 모듈 표시, 락온/레이더 거리, 최대 줌 등).
 
+
+## Modus (수트 AI)
+
+호출어 **"Modus"**. 음성으로 부르거나, 전용 HUD 챗(`M`)에 입력해서 부릅니다. 영어/한국어 지원 (`/modus lang en|ko`, 설정의 `voiceLang`).
+
+- **음성 출력**: OS 음성엔진으로 합성 → 헬멧 무전 필터 → 재생. Windows(SAPI), macOS(`say`), Linux(`espeak-ng`) 자동 선택.
+  더 좋은 목소리는 설정의 `ttsCommand`에 Piper 같은 명령을 지정하세요.
+- **선제 음성 경고**: 선체 손상, 갑옷 파손, 충돌/추락, 산소, 용암, 크리퍼 점화, 적 근접, 목표 제거, 스캔 결과 등.
+- **음성 호출**: 오프라인 인식(Vosk). 처음 한 번 `/modus install` (라이브러리+모델 다운로드, 약 50~100MB) 후
+  `/modus mic on` 또는 `V` 푸시투토크. 마이크는 기본 꺼짐이며, 켜기 전에는 아무것도 듣지 않습니다.
+- **명령 예시**: "Modus, status report" / "scan" / "zoom in" / "mark waypoint" / "power to sensors" / "lock targets" / "run diagnostics" /
+  "where am I" / "weather" — 한국어: "모더스, 상태 보고" / "스캔" / "확대" / "웨이포인트" / "센서에 전력" / "락온" / "진단" / "위치" / "날씨"
+- 명령: `/modus say|ask|install|mic on|off|lang|test|status`
+
+## 추가 HUD 모듈
+
+3D 지형 와이어프레임 지도, 무장/탄약 패널(`R`: 다중 락온 + 우선순위 목록), 전력 배분(`P`: 센서/광학/분석이 실제 범위·줌·락 수에 영향),
+헬멧 닫힘 부팅 시퀀스와 바이저 프레임, 피격 방향 표시, 시스템 로그, 다른 플레이어 채팅 시 영상통화 창(얼굴+메시지), 진단 표(`G`).
+
+| 키 | 동작 |
+|---|---|
+| `M` | Modus 전용 HUD 챗 |
+| `V` | 푸시투토크 |
+| `R` | 다중 락온 |
+| `P` | 전력 배분 전환 |
+| `G` | 시스템 진단 표 |
+
 ## 설치
 
 [Releases](../../releases) 또는 Actions 아티팩트의 `ironhud-*.jar`를 `mods` 폴더에 넣으세요.
