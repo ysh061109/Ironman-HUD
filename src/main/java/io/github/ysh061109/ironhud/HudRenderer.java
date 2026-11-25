@@ -70,6 +70,8 @@ public final class HudRenderer {
         if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(h, t, boot, pri);
         if (HudConfig.SHOW_WEAPONS.get()) WeaponPanel.render(p, 14f, h / 2f + 38f, t, boot, pri, acc);
         reactor(p, 58f, h - 58f, t, boot, pri);
+        FilmStyle.thrustArc(58f, h - 58f, t, boot, pri, RED, Mth.clamp((p.isFallFlying() ? Math.max(HudState.speed, HudState.flightSpeed) / 40f : HudState.speed / 8f), 0f, 1f));
+        FilmStyle.diagnosticCube(p, w, h, t, boot, acc == RED ? AMBER : AMBER);
         if (HudConfig.SHOW_RADAR.get()) radar(p, pt, w - 58f, h - 58f, t, boot, pri, acc);
         if (HudConfig.SHOW_TERRAIN.get()) TerrainMap.render(p, pt, w - 142f, h - 196f, 130f, 80f, t, boot, pri, acc);
         infoPanel(p, level, w, t, boot, pri);

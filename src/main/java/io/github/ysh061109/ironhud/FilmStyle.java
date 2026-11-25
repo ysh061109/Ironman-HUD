@@ -180,4 +180,56 @@ public final class FilmStyle {
             i++;
         }
     }
+
+    /** Segmented thrust-output arc (thick bars that turn red when pushed), wrapped around the reactor. */
+    public static void thrustArc(float cx, float cy, float t, float boot, int pri, int warn, float frac) {
+        int n = 18;
+        for (int i = 0; i < n; i++) {
+            float a0 = 135f + 270f * i / n;
+            boolean on = i < Math.round(frac * n);
+            int rgb = i >= n - 5 ? warn : pri;
+            float len = 270f / n - 3f;
+            Draw.arc(cx, cy, 54f, 55f + (on ? 6f : 2f), a0, len * boot, Draw.col(rgb, on ? 0.9f : 0.2f));
+        }
+        Draw.textCenter("THRUST", cx, cy + 66f, Draw.col(pri, 0.7f * boot), 0.5f);
+    }
+
+    /** Amber angled plate with a slowly turning wireframe cube: the film's "diagnostic feed" panel. */
+    public static void diagnosticCube(LocalPlayer p, int w, int h, float t, float boot, int amber) {
+        float x = w - 92f, y = h * 0.40f, pw = 80f, ph = 64f, cut = 8f;
+        int fr = Draw.col(amber, 0.85f * boot);
+        Draw.rect(x + cut, y, x + pw, y + ph, Draw.col(0x1A1204, 0.45f * boot));
+        Draw.rect(x, y + cut, x + cut, y + ph, Draw.col(0x1A1204, 0.45f * boot));
+        Draw.line(x + cut, y, x + pw, y, 1.2f, fr);
+        Draw.line(x, y + cut, x + cut, y, 1.2f, fr);
+        Draw.line(x, y + cut, x, y + ph, 1.2f, fr);
+        Draw.line(x, y + ph, x + pw, y + ph, 1.2f, fr);
+        Draw.line(x + pw, y, x + pw, y + ph, 1.2f, fr);
+        Draw.text("DIAGNOSTIC FEED", x + 12f, y + 3f, Draw.col(amber, boot), 0.45f);
+        float cx = x + pw / 2f, cy = y + 31f, r = 13f;
+        float ay = t * 0.03f, ax = 0.6f;
+        float[][] v = new float[8][2];
+        for (int i = 0; i < 8; i++) {
+            float vx = (i & 1) == 0 ? -1 : 1, vy = (i & 2) == 0 ? -1 : 1, vz = (i & 4) == 0 ? -1 : 1;
+            float x1 = vx * (float) Math.cos(ay) + vz * (float) Math.sin(ay);
+            float z1 = -vx * (float) Math.sin(ay) + vz * (float) Math.cos(ay);
+            float y2 = vy * (float) Math.cos(ax) - z1 * (float) Math.sin(ax);
+            v[i][0] = cx + x1 * r;
+            v[i][1] = cy + y2 * r;
+        }
+        int ec = Draw.col(amber, 0.9f * boot);
+        for (int i = 0; i < 8; i++) {
+            for (int b = 1; b <= 4; b <<= 1) {
+                if ((i & b) == 0) Draw.line(v[i][0], v[i][1], v[i | b][0], v[i | b][1], 1f, ec);
+            }
+        }
+        float avg = 0;
+        int n = 0;
+        for (int i = 0; i < 4; i++) if (HudState.armorPresent[i]) {
+            avg += Mth.clamp(HudState.armorPct[i], 0f, 1f);
+            n++;
+        }
+        String s = n == 0 ? "ARMOR --" : "ARMOR " + Math.round(avg / n * 100f) + "%";
+        Draw.textCenter(s, cx, y + ph - 12f, Draw.col(0xFFFFFF, 0.85f * boot), 0.5f);
+    }
 }
