@@ -192,7 +192,7 @@ public final class FilmStyle {
     /** Green plate used for "TARGET ACQUISITION" while scanning or multi-locking. */
     public static void acquisitionTag(int w, int h, float boot, int count) {
         if (!HudState.multiLock && HudState.age - HudState.scanStart > 100) return;
-        float x = w / 2f - 120f, y = h - 62f;
+        float x = w / 2f + 24f, y = h - 62f;
         int g = 0x5DFFB0;
         Draw.rect(x, y, x + 96f, y + 12f, Draw.col(0x03231A, 0.75f * boot));
         Draw.box(x, y, 96f, 12f, g, 0f, 0.9f * boot);
@@ -294,5 +294,48 @@ public final class FilmStyle {
         Draw.rect(x - tw / 2f - 3f, y, x + tw / 2f + 3f, y + 8f, Draw.col(0x02101A, 0.55f * alpha));
         Draw.box(x - tw / 2f - 3f, y, tw + 6f, 8f, rgb, 0f, 0.9f * alpha);
         Draw.textCenter(tag, x, y + 1.5f, Draw.col(0xFFFFFF, alpha), 0.5f);
+    }
+
+    private static void plate(float x, float y, float w, float h, int rgb, float a) {
+        float c = 3f;
+        int fr = Draw.col(rgb, 0.85f * a);
+        Draw.rect(x + c, y, x + w, y + h, Draw.col(0x02101A, 0.5f * a));
+        Draw.line(x + c, y, x + w, y, 1f, fr);
+        Draw.line(x, y + c, x + c, y, 1f, fr);
+        Draw.line(x, y + c, x, y + h, 1f, fr);
+        Draw.line(x, y + h, x + w - c, y + h, 1f, fr);
+        Draw.line(x + w - c, y + h, x + w, y + h - c, 1f, fr);
+        Draw.line(x + w, y, x + w, y + h - c, 1f, fr);
+    }
+
+    private static void segBar(float x, float y, float w, float h, int n, float frac, int rgb, float a) {
+        float sw = (w - (n - 1) * 1f) / n;
+        int on = Math.round(Mth.clamp(frac, 0f, 1f) * n);
+        for (int i = 0; i < n; i++) {
+            float sx = x + i * (sw + 1f);
+            Draw.rect(sx, y, sx + sw, y + h, Draw.col(rgb, (i < on ? 0.95f : 0.18f) * a));
+        }
+    }
+
+    /** Food, oxygen and experience as angled plates with segmented bars (film-style readouts). */
+    public static void vitals(LocalPlayer p, float x, float y, float t, float boot, int pri, int warn) {
+        float food = Mth.clamp(p.getFoodData().getFoodLevel() / 20f, 0f, 1f);
+        float air = Mth.clamp(p.getAirSupply() / (float) Math.max(1, p.getMaxAirSupply()), 0f, 1f);
+        float xp = Mth.clamp(p.experienceProgress, 0f, 1f);
+        boolean underwater = air < 0.999f;
+        float pw = 112f, ph = 11f;
+        float[] vals = {food, air, xp};
+        String[] lab = {"NUTRIENT", "O2 RESERVE", "XP  LV " + p.experienceLevel};
+        for (int i = 0; i < 3; i++) {
+            float yy = y + i * (ph + 3f);
+            float v = vals[i];
+            boolean low = i < 2 && v < 0.3f && (i == 0 || underwater);
+            int rgb = low ? warn : (i == 2 ? 0x8DFFB0 : pri);
+            float a = boot * (i == 1 && !underwater ? 0.45f : 1f) * (low ? 0.65f + 0.35f * (float) Math.sin(t * 0.7f) : 1f);
+            plate(x, yy, pw, ph, rgb, a);
+            Draw.text(lab[i], x + 5f, yy + 3f, Draw.col(0xDFF9FF, 0.85f * a), 0.45f);
+            segBar(x + 52f, yy + 3f, 40f, 5f, 10, v, rgb, a);
+            Draw.textRight(Math.round(v * 100f) + "%", x + pw - 4f, yy + 3f, Draw.col(rgb, a), 0.45f);
+        }
     }
 }

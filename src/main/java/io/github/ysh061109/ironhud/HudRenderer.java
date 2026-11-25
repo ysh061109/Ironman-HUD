@@ -79,6 +79,7 @@ public final class HudRenderer {
         FilmStyle.reticleExtras(w / 2f, h / 2f, w, heading(p, pt), boot, pri);
         FilmStyle.bottomArc(w, h, t, boot, pri);
         FilmStyle.acquisitionTag(w, h, boot, HudState.multiLock ? HudState.locks.size() : HudState.contacts.size());
+        FilmStyle.vitals(p, 118f, h - 66f, t, boot, pri, RED);
         FilmStyle.gaugeRow(p, w, h, t, boot, pri, RED);
         FilmStyle.ladder(p, pt, h, boot, pri);
         collisionReadout(w / 2f, h / 2f, t, p);
