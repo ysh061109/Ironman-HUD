@@ -209,7 +209,7 @@ public final class HudState {
         if (age % 4 == 0) scanContacts(p, level);
         scanTarget(p, level);
         motion(p, level);
-        if (age % 10 == 0) sampleTerrain(p, level);
+        if (age % 20 == 0 && HudConfig.SHOW_TERRAIN.get()) sampleTerrain(p, level);
         zoom();
         hits.removeIf(h -> age - h[1] > 60f);
         if (age == scanStart + 42) Modus.afterScan(threats, contacts.size());

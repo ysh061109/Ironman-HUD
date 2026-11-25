@@ -323,7 +323,7 @@ public final class FilmStyle {
         float air = Mth.clamp(p.getAirSupply() / (float) Math.max(1, p.getMaxAirSupply()), 0f, 1f);
         float xp = Mth.clamp(p.experienceProgress, 0f, 1f);
         boolean underwater = air < 0.999f;
-        float pw = 76f, ph = 11f;
+        float pw = 70f, ph = 11f;
         int w = net.minecraft.client.Minecraft.getInstance().getWindow().getGuiScaledWidth();
         float[] vals = {food, air, xp};
         String[] lab = {"NUTRI", "O2", "XP " + p.experienceLevel};
@@ -336,7 +336,7 @@ public final class FilmStyle {
             float a = boot * (i == 1 && !underwater ? 0.45f : 1f) * (low ? 0.65f + 0.35f * (float) Math.sin(t * 0.7f) : 1f);
             plate(px[i], py[i], pw, ph, rgb, a);
             Draw.text(lab[i], px[i] + 5f, py[i] + 3f, Draw.col(0xDFF9FF, 0.85f * a), 0.45f);
-            segBar(px[i] + 30f, py[i] + 3f, 34f, 5f, 8, v, rgb, a);
+            segBar(px[i] + 28f, py[i] + 3f, 30f, 5f, 8, v, rgb, a);
             if (low) Draw.text("!", px[i] + pw - 8f, py[i] + 3f, Draw.col(warn, a), 0.6f);
         }
     }

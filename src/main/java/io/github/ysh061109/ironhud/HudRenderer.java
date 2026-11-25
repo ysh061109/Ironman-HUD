@@ -54,6 +54,7 @@ public final class HudRenderer {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableCull();
         Draw.begin(g, mc.font);
+        Draw.lod = HudConfig.LOW_DETAIL.get() || fps < 40f;
 
         screenFx(w, h, t, pri);
         if (HudConfig.SHOW_HELMET.get()) Overlays.helmetFrame(w, h, pri);
@@ -67,20 +68,18 @@ public final class HudRenderer {
         TargetScan.render(cam, pt, t, w, h, pri, acc);
         Overlays.hits(p, pt, w, h, t);
         if (HudConfig.SHOW_COMPASS.get()) compass(p, pt, w, t, boot, pri, acc);
-        boolean lowD = HudConfig.LOW_DETAIL.get() || fps < 40f;
-        Draw.lod = lowD;
 
         // ---- left column: log, hull lamp, suit status, reactor
-        if (HudConfig.SHOW_SYSLOG.get()) Overlays.sysLog(14f, 20f, boot, pri);
-        FilmStyle.hullLamp(p, 14f, 52f, t, boot, pri, RED);
-        if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(h * 0.5f - 42f, t, boot, pri);
-        reactor(p, 50f, h - 50f, t, boot, pri);
+        if (HudConfig.SHOW_SYSLOG.get()) Overlays.sysLog(14f, 36f, boot, pri);
+        FilmStyle.hullLamp(p, 14f, 62f, t, boot, pri, RED);
+        if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(96f, t, boot, pri);
+        reactor(p, 50f, h - 48f, t, boot, pri);
 
         // ---- right column: stacked from the top, below any minimap, stopping above the radar
         float ry = 8f + HudConfig.topRightReserve();
         float rMax = h - 100f;
-        ry = infoPanel(p, level, w, ry, rMax, t, boot, pri);
-        if (HudState.multiLock) ry = Overlays.priorityList(w - 12f, ry, rMax, t, pri);
+        ry = infoPanel(p, level, w, ry, HudState.multiLock ? Math.min(rMax, ry + 52f) : rMax, t, boot, pri);
+        if (HudState.multiLock && ry + 22f <= rMax) ry = Overlays.priorityList(w - 12f, ry, rMax, t, pri);
         if (HudConfig.SHOW_TERRAIN.get() && ry + 62f <= rMax) {
             TerrainMap.render(p, pt, w - 124f, ry, 112f, 58f, t, boot, pri, acc);
             ry += 62f;
@@ -94,7 +93,7 @@ public final class HudRenderer {
 
         reticle(w / 2f, h / 2f, t, boot, pri);
         FilmStyle.reticleExtras(w / 2f, h / 2f, w, heading(p, pt), boot, pri);
-        FilmStyle.vitals(p, 102f, h - 50f, t, boot, pri, RED);
+        FilmStyle.vitals(p, 100f, h - 50f, t, boot, pri, RED);
         FilmStyle.bottomArc(w, h, t, boot, pri);
         FilmStyle.acquisitionTag(w, h, boot, HudState.multiLock ? HudState.locks.size() : HudState.contacts.size());
         FilmStyle.gaugeRow(p, w, h, t, boot, pri, RED);

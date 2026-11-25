@@ -104,9 +104,10 @@ public final class TargetScan {
             Draw.arc(cx, cy, R - 0.8f, R + 0.8f, i * 30f + spin * 1.5f, 18f, Draw.col(rgb, 0.95f * a));
         }
         Draw.ring(cx, cy, R - 7f, 1f, Draw.col(rgb, 0.35f * a));
-        for (int i = 0; i < 48; i++) {
-            float ang = (float) Math.toRadians(i * 7.5f - spin * 2f);
-            float len = i % 4 == 0 ? 4.5f : 2.2f;
+        int tickN = Draw.lod ? 24 : 48;
+        for (int i = 0; i < tickN; i++) {
+            float ang = (float) Math.toRadians(i * (360f / tickN) - spin * 2f);
+            float len = i % (tickN / 12) == 0 ? 4.5f : 2.2f;
             float c0 = (float) Math.cos(ang), s0 = (float) Math.sin(ang);
             Draw.line(cx + c0 * (R - 7f), cy + s0 * (R - 7f), cx + c0 * (R - 7f - len), cy + s0 * (R - 7f - len),
                     1f, Draw.col(rgb, 0.7f * a));

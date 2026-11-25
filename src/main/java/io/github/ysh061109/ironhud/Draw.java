@@ -137,6 +137,7 @@ public final class Draw {
 
     /** n dashes around a circle, each covering 60% of its slot. */
     public static void dashedRing(float cx, float cy, float r, float th, float rotDeg, int n, int argb) {
+        if (lod) n = Math.max(4, n / 2);
         float slot = 360f / n;
         for (int i = 0; i < n; i++) {
             arc(cx, cy, r - th * 0.5f, r + th * 0.5f, rotDeg + i * slot, slot * 0.6f, argb);
