@@ -111,6 +111,7 @@ public final class HudRenderer {
         if (sh < 1f) visorShutters(w, h, sh, pri);
         Draw.end(g);
         HudUi.hotbarItems(g, mc, w, h);
+        TargetScan.drawView(g);
         Comms.drawFace(g, w, h);
         RenderSystem.enableCull();
     }

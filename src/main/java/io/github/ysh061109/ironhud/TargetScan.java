@@ -23,11 +23,35 @@ import java.util.Locale;
 public final class TargetScan {
     private static final int RED = 0xFF3B30, AMBER = 0xFFB020, WHITE = 0xDFF9FF, GRAY = 0x7B8794;
 
+    private static float[] view;
+    private static LivingEntity viewEntity;
+
     private TargetScan() {}
+
+    /** Draws the real creature inside the lock ring's viewport; runs after the line batch is flushed. */
+    public static void drawView(net.minecraft.client.gui.GuiGraphics g) {
+        if (view == null || viewEntity == null || view[3] < 0.6f) return;
+        float cx = view[0], cy = view[1], r = view[2];
+        float half = r * 0.7f;
+        int x1 = Math.round(cx - half), y1 = Math.round(cy - half), x2 = Math.round(cx + half), y2 = Math.round(cy + half);
+        LivingEntity e = viewEntity;
+        float size = Math.max(0.4f, Math.max(e.getBbHeight(), e.getBbWidth() * 1.3f));
+        int scale = Math.max(4, Math.round(half * 1.7f / size));
+        g.enableScissor(x1, y1, x2, y2);
+        try {
+            net.minecraft.client.gui.screens.inventory.InventoryScreen.renderEntityInInventoryFollowsMouse(
+                    g, x1, y1, x2, y2, scale, 0.0625f, cx - 18f, cy - 8f, e);
+        } catch (RuntimeException ignored) {
+            // some modded entities refuse GUI rendering; the wireframe card still shows them
+        }
+        g.disableScissor();
+    }
 
     private record Line(String text, int rgb, boolean bar, float barFrac) {}
 
     public static void render(Cam cam, float pt, float t, int w, int h, int pri, int acc) {
+        view = null;
+        viewEntity = null;
         LivingEntity e = HudState.targetEntity;
         if (!HudState.hasTarget || e == null) return;
 
@@ -100,24 +124,29 @@ public final class TargetScan {
             }
         }
 
-        // ---- ring stack
+        // ---- ring stack: translucent thick red band, bright rim segments, inner viewport
+        float vp = R - 18f;
+        Draw.arc(cx, cy, R - 14f, R, 0f, 360f, Draw.col(rgb, 0.24f * a));
         for (int i = 0; i < 12; i++) {
-            Draw.arc(cx, cy, R - 0.8f, R + 0.8f, i * 30f + spin * 1.5f, 18f, Draw.col(rgb, 0.95f * a));
+            Draw.arc(cx, cy, R - 2.6f, R + 1.2f, i * 30f + spin * 1.5f, 24f, Draw.col(rgb, 0.95f * a));
         }
-        Draw.ring(cx, cy, R - 7f, 1f, Draw.col(rgb, 0.35f * a));
+        Draw.ring(cx, cy, R + 8f, 1f, Draw.col(WHITE, 0.35f * a));
         int tickN = Draw.lod ? 24 : 48;
         for (int i = 0; i < tickN; i++) {
             float ang = (float) Math.toRadians(i * (360f / tickN) - spin * 2f);
             float len = i % (tickN / 12) == 0 ? 4.5f : 2.2f;
             float c0 = (float) Math.cos(ang), s0 = (float) Math.sin(ang);
-            Draw.line(cx + c0 * (R - 7f), cy + s0 * (R - 7f), cx + c0 * (R - 7f - len), cy + s0 * (R - 7f - len),
+            Draw.line(cx + c0 * (R + 8f), cy + s0 * (R + 8f), cx + c0 * (R + 8f - len), cy + s0 * (R + 8f - len),
                     1f, Draw.col(rgb, 0.7f * a));
         }
         float hpF = Mth.clamp(HudState.targetHp / HudState.targetMaxHp, 0f, 1f);
-        Draw.arc(cx, cy, R - 15f, R - 12f, -90f, 360f, Draw.col(sec, 0.15f * a));
-        Draw.arc(cx, cy, R - 15f, R - 12f, -90f, 360f * hpF * ease, Draw.col(hpF < 0.3f ? RED : sec, 0.95f * a));
-        for (int i = 0; i < 3; i++) {
-            Draw.arc(cx, cy, R - 21f, R - 19.5f, i * 120f + spin * 3f, 50f, Draw.col(rgb, 0.8f * a));
+        Draw.arc(cx, cy, R - 12.5f, R - 10f, -90f, 360f, Draw.col(sec, 0.15f * a));
+        Draw.arc(cx, cy, R - 12.5f, R - 10f, -90f, 360f * hpF * ease, Draw.col(hpF < 0.3f ? RED : sec, 0.95f * a));
+        if (vp >= 12f) {
+            Draw.disc(cx, cy, vp - 3f, Draw.col(0x9CC8D8, 0.55f * a));
+            Draw.ring(cx, cy, vp - 3f, 1.6f, Draw.col(WHITE, 0.9f * a));
+            view = new float[]{cx, cy, vp - 5f, ease};
+            viewEntity = e;
         }
         // cardinal pointers
         for (int i = 0; i < 4; i++) {
