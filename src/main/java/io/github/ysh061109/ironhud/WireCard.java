@@ -101,35 +101,9 @@ public final class WireCard {
         Draw.text(cat + " // " + e.getType().builtInRegistryHolder().key().location().getPath().toUpperCase(Locale.ROOT),
                 x0 + 6f, y0 + 17f, Draw.col(WHITE, 0.65f * a), 0.5f);
 
-        // rotating lathe wireframe (left half)
-        float mx = x0 + 34f, my = y0 + 31f, mh = 58f;
-        float aspect = Mth.clamp(e.getBbWidth() / Math.max(0.2f, e.getBbHeight()), 0.2f, 1.2f);
-        float rad = mh * 0.5f * aspect * 1.1f;
-        float yaw = t * 0.06f, tilt = 0.28f;
-        int rings = 14, mer = 10;
-        float[][] last = new float[mer][2];
-        boolean first = true;
-        for (int i = 0; i < rings; i++) {
-            float u = i / (rings - 1f);
-            float r = prof(u) * rad;
-            float yy = my + mh - u * mh;
-            float[][] cur = new float[mer][2];
-            for (int k = 0; k < mer; k++) {
-                float th = yaw + k * 6.2832f / mer;
-                cur[k][0] = mx + (float) Math.cos(th) * r;
-                cur[k][1] = yy + (float) Math.sin(th) * r * tilt;
-            }
-            for (int k = 0; k < mer; k++) {
-                float[] p0 = cur[k], p1 = cur[(k + 1) % mer];
-                Draw.line(p0[0], p0[1], p1[0], p1[1], 1f, Draw.col(WHITE, (0.35f + 0.4f * (1f - u)) * a));
-                if (!first) Draw.line(last[k][0], last[k][1], p0[0], p0[1], 1f, Draw.col(WHITE, 0.3f * a));
-            }
-            last = cur;
-            first = false;
-        }
-        // scan line sweeping the model
-        float sw = (t * 0.03f) % 1f;
-        Draw.line(mx - rad - 6f, my + mh * (1f - sw), mx + rad + 6f, my + mh * (1f - sw), 1.2f, Draw.col(sec, 0.9f * a));
+        // shape-aware hologram of the creature (left half)
+        float mx = x0 + 34f, my = y0 + 60f, mh = 54f;
+        EntityHolo.renderCard(e, mx, my, mh, t, a, ease, rgb, sec);
 
         // right half: tag, stats, graphs
         float rx = x0 + 74f;

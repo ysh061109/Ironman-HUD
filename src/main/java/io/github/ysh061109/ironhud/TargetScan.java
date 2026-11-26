@@ -69,6 +69,7 @@ public final class TargetScan {
         float r = Mth.clamp(size * 0.55f, 20f, Math.min(w, h) * 0.36f);
         float R = (r + 8f) * (1f + (1f - ease) * 1.2f);
         float spin = dead ? 0f : t;
+        EntityHolo.renderWorld(cam, e, pt, t, rgb, sec, ease, dead);
 
         // ---- wireframe box
         for (int i = 0; i < 8; i++) {
