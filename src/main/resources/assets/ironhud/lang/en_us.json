@@ -42,5 +42,7 @@
   "ironhud.configuration.voskModelUrl": "Speech model URL",
   "ironhud.configuration.neuralVoice": "Use downloaded neural voice",
   "ironhud.configuration.piperUrl": "Piper engine URL",
-  "ironhud.configuration.piperVoiceUrl": "Piper voice (.onnx) URL"
+  "ironhud.configuration.piperVoiceUrl": "Piper voice (.onnx) URL",
+  "ironhud.configuration.suitModel": "Third-person suit model",
+  "ironhud.configuration.suitHolster": "Holster hotbar guns on suit"
 }

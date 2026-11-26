@@ -42,5 +42,7 @@
   "ironhud.configuration.voskModelUrl": "음성 모델 URL",
   "ironhud.configuration.neuralVoice": "다운로드한 신경망 음성 사용",
   "ironhud.configuration.piperUrl": "Piper 엔진 URL",
-  "ironhud.configuration.piperVoiceUrl": "Piper 음성(.onnx) URL"
+  "ironhud.configuration.piperVoiceUrl": "Piper 음성(.onnx) URL",
+  "ironhud.configuration.suitModel": "3인칭 슈트 모델",
+  "ironhud.configuration.suitHolster": "슈트 등 뒤 총 거치"
 }

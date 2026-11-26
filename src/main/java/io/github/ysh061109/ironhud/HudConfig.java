@@ -66,6 +66,12 @@ public final class HudConfig {
     public static final ModConfigSpec.BooleanValue LOW_DETAIL =
             B.comment("Cheaper rendering: fewer decorative segments and ticks. Also switches on automatically when FPS is low")
                     .define("lowDetail", false);
+    public static final ModConfigSpec.BooleanValue SUIT_MODEL =
+            B.comment("Third person: dress your player model in the armored suit (client-side only)")
+                    .define("suitModel", true);
+    public static final ModConfigSpec.BooleanValue SUIT_HOLSTER =
+            B.comment("Third person: show the other guns from your hotbar holstered on the suit's back")
+                    .define("suitHolster", true);
     public static final ModConfigSpec.BooleanValue SHOW_HELMET =
             B.comment("Helmet frame vignette").define("showHelmet", true);
 

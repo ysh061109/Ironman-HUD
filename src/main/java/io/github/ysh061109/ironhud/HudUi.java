@@ -5,6 +5,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
@@ -40,6 +41,12 @@ public final class HudUi {
             Draw.rect(x, y, x + 18f, y + 18f, Draw.col(rgb, sel ? 0.22f : 0.07f));
             Draw.box(x - 0.5f, y - 0.5f, 19f, 19f, rgb, 0f, (sel ? 1f : 0.45f) * boot);
             Draw.text(Integer.toString(i + 1), x + 1.5f, y + 1f, Draw.col(0xDFF9FF, sel ? 0.9f : 0.4f), 0.4f);
+            TaczCompat.Gun gn = TaczCompat.read(p, p.getInventory().items.get(i));
+            if (gn != null) {
+                float f = Mth.clamp(gn.mag() / (float) Math.max(1, gn.cap()), 0f, 1f);
+                Draw.rect(x, y + 16.5f, x + 18f, y + 18f, Draw.col(0x000000, 0.5f));
+                Draw.rect(x, y + 16.5f, x + 18f * f, y + 18f, Draw.col(f <= 0.25f ? 0xFF3B30 : 0xFFB020, 0.95f * boot));
+            }
             if (sel) {
                 Draw.rect(x - 1f, y + 20f, x + 19f, y + 21.5f, Draw.col(acc, 1f));
                 Draw.triDown(x + 9f, y - 6f, 2.5f, 1f, Draw.col(acc, 0.9f * boot));
@@ -70,6 +77,15 @@ public final class HudUi {
             int x = (int) (x0 + i * PITCH) + 1;
             g.renderItem(st, x, y + 1);
             g.renderItemDecorations(mc.font, st, x, y + 1);
+            TaczCompat.Gun gn = TaczCompat.read(p, st);
+            if (gn != null) {
+                g.pose().pushPose();
+                g.pose().translate(x + 17f, y + 1f, 300f);
+                g.pose().scale(0.5f, 0.5f, 1f);
+                String c = Integer.toString(gn.mag());
+                g.drawString(mc.font, c, -mc.font.width(c), 0, gn.mag() == 0 ? 0xFF3B30 : 0xFFE08A, true);
+                g.pose().popPose();
+            }
         }
         ItemStack off = p.getInventory().offhand.get(0);
         if (!off.isEmpty()) {

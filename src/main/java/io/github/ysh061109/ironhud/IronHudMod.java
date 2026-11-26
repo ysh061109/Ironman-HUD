@@ -49,6 +49,14 @@ public class IronHudMod {
 
         modBus.addListener(this::registerKeys);
         modBus.addListener(this::registerLayers);
+        modBus.addListener((net.neoforged.neoforge.client.event.EntityRenderersEvent.AddLayers e) -> {
+            for (var skin : e.getSkins()) {
+                var r = e.getSkin(skin);
+                if (r instanceof net.minecraft.client.renderer.entity.player.PlayerRenderer pr) {
+                    pr.addLayer(new SuitLayer(pr, e.getEntityModels()));
+                }
+            }
+        });
         NeoForge.EVENT_BUS.addListener(this::onClientTick);
         NeoForge.EVENT_BUS.addListener(this::onGuiLayerPre);
         NeoForge.EVENT_BUS.addListener((net.neoforged.neoforge.client.event.ContainerScreenEvent.Render.Background e) ->
@@ -117,6 +125,7 @@ public class IronHudMod {
             }
         }
         handlePtt(mc);
+        if (mc.player != null) TaczCompat.tick(mc.player);
         HudState.tick(mc);
     }
 

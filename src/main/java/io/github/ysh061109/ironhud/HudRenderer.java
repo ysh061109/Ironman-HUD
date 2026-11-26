@@ -86,7 +86,12 @@ public final class HudRenderer {
             TerrainMap.render(p, pt, w - 124f, ry, 112f, 58f, t, boot, pri, acc);
             ry += 62f;
         }
-        if (HudConfig.SHOW_WEAPONS.get() && ry + 56f <= rMax) {
+        TaczCompat.Gun gun = HudConfig.SHOW_WEAPONS.get() ? TaczCompat.read(p, p.getMainHandItem()) : null;
+        if (gun != null && ry + AmmoHud.H + 4f <= rMax) {
+            AmmoHud.render(p, gun, p.getMainHandItem().getHoverName().getString().toUpperCase(java.util.Locale.ROOT),
+                    w - 124f, ry + 2f, t, pt, boot, pri, acc);
+            ry += AmmoHud.H + 6f;
+        } else if (HudConfig.SHOW_WEAPONS.get() && ry + 56f <= rMax) {
             WeaponPanel.render(p, w - 124f, ry, t, boot, pri, acc);
             ry += 60f;
         }
