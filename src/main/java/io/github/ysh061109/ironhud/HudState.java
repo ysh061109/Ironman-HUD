@@ -282,6 +282,8 @@ public final class HudState {
         collisionTtc = -1;
         java.util.Arrays.fill(altHist, (float) p.getY());
         Alerts.clear();
+        SysLog.clear();
+        Modus.LOG.clear();
         Cracks.clear();
         SysLog.clear();
         hits.clear();

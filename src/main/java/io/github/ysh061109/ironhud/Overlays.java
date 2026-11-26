@@ -84,7 +84,7 @@ public final class Overlays {
             }
             int chars = (int) ((a - start) * 3f);
             float ly = y + i * 10f;
-            Draw.text(label.substring(0, Math.min(label.length(), chars)), x, ly, Draw.col(WHITE, 0.9f * fade), 0.7f);
+            Draw.text(label.substring(0, Mth.clamp(chars, 0, label.length())), x, ly, Draw.col(WHITE, 0.9f * fade), 0.7f);
             if (chars > label.length() + 3) {
                 int ok = status.equals("OFFLINE") ? AMBER : 0x39FF88;
                 Draw.textRight(status, x + 200f, ly, Draw.col(ok, fade), 0.7f);
@@ -116,12 +116,12 @@ public final class Overlays {
         int shown = 0;
         for (int i = lines.size() - 1; i >= 0 && shown < 3; i--) {
             SysLog.Entry e = lines.get(i);
-            float age = HudState.age - e.born();
+            float age = Math.max(0f, HudState.age - e.born());
             if (age > 300f) continue;
             float fade = Mth.clamp((300f - age) / 50f, 0f, 1f);
             int chars = (int) (age * 3f) + 1;
             String s = "> " + e.text();
-            Draw.text(s.substring(0, Math.min(s.length(), chars)), x, y + shown * 9f,
+            Draw.text(s.substring(0, Mth.clamp(chars, 0, s.length())), x, y + shown * 9f,
                     Draw.col(pri, 0.9f * fade * boot), 0.65f);
             shown++;
         }
@@ -136,12 +136,12 @@ public final class Overlays {
         float baseY = h - 84f;
         for (int i = log.size() - 1; i >= 0 && shown < 3; i--) {
             Modus.Msg m = log.get(i);
-            float age = HudState.age + pt - m.born();
+            float age = Math.max(0f, HudState.age + pt - m.born()); // age counter restarts on respawn
             if (age > 420f) continue;
             float fade = Mth.clamp((420f - age) / 60f, 0f, 1f);
             String s = (m.modus() ? "MODUS: " : "> ") + m.text();
             int chars = m.modus() ? (int) (age * 2.2f) + 7 : s.length();
-            String vis = s.substring(0, Math.min(s.length(), chars));
+            String vis = s.substring(0, Mth.clamp(chars, 0, s.length()));
             float y = baseY - shown * 11f;
             Draw.textCenter(vis, w / 2f, y, Draw.col(m.modus() ? acc : WHITE, (m.modus() ? 1f : 0.75f) * fade), 0.85f);
             shown++;
