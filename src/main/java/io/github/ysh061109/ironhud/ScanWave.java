@@ -118,8 +118,13 @@ public final class ScanWave {
                 if (!OK_P[i][j]) continue;
                 if (i + 1 < N) seg(i, j, i + 1, j, R, life, far, pri, acc, cam);
                 if (j + 1 < N) seg(i, j, i, j + 1, R, life, far, pri, acc, cam);
-                // relief column that pulses up as the wave passes
+                // point-cloud node: the film's holographics are dot fields, brightest at the wave front
                 float behind = R - DD[i][j];
+                float nf = Mth.clamp(1f - behind / 16f, 0f, 1f);
+                float dot = 0.9f + 1.1f * nf;
+                Draw.rect(SX[i][j] - dot * 0.5f, SY[i][j] - dot * 0.5f, SX[i][j] + dot * 0.5f, SY[i][j] + dot * 0.5f,
+                        Draw.col(nf > 0.6f ? 0xFFFFFF : acc, (0.35f + 0.5f * nf) * life));
+                // relief column that pulses up as the wave passes
                 if (!lod && behind < 9f && ((i + j) & 1) == 0) {
                     float k = 1f - behind / 9f;
                     float hgt = 0.9f * k;
@@ -133,8 +138,8 @@ public final class ScanWave {
         // wave front: a ring that follows the relief
         if (R < HudState.radarRange() + 3f) {
             int n = lod ? 48 : 96;
-            for (int pass = 0; pass < 2; pass++) {
-                float rr = R - pass * 1.6f;
+            for (int pass = lod ? 1 : -1; pass < 2; pass++) {
+                float rr = R - Math.max(pass, 0) * 1.6f;
                 if (rr < 1f) continue;
                 float px = 0, py = 0;
                 boolean prev = false;
@@ -144,7 +149,8 @@ public final class ScanWave {
                     boolean ok = cam.project(new Vec3(x, groundAt(x, z) + 0.12, z), XY)
                             && Math.abs(XY[0] - cam.w * 0.5f) < margin && Math.abs(XY[1] - cam.h * 0.5f) < margin;
                     if (ok && prev) {
-                        Draw.line(px, py, XY[0], XY[1], pass == 0 ? 1.8f : 1f,
+                        if (pass < 0) Draw.line(px, py, XY[0], XY[1], 5f, Draw.col(acc, 0.14f * life)); // bloom
+                        else Draw.line(px, py, XY[0], XY[1], pass == 0 ? 1.8f : 1f,
                                 Draw.col(pass == 0 ? 0xFFFFFF : acc, (pass == 0 ? 0.85f : 0.4f) * life));
                     }
                     prev = ok;

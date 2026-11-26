@@ -44,5 +44,6 @@
   "ironhud.configuration.piperUrl": "Piper 엔진 URL",
   "ironhud.configuration.piperVoiceUrl": "Piper 음성(.onnx) URL",
   "ironhud.configuration.suitModel": "3인칭 슈트 모델",
-  "ironhud.configuration.suitHolster": "슈트 등 뒤 총 거치"
+  "ironhud.configuration.suitHolster": "슈트 등 뒤 총 거치",
+  "ironhud.configuration.parallax": "머리 회전 시 HUD 지연 (깊이감)"
 }

@@ -369,4 +369,21 @@ public final class FilmStyle {
         Draw.textRight(num, x + pw - 5f, y + 3f, Draw.col(0xFFFFFF, 0.9f * boot), 0.6f);
         segBar(x + 24f, y + 12f, pw - 30f, 4f, 20, frac, rgb, boot * (crit ? 0.6f + 0.4f * flash : 1f));
     }
+
+    /** Large faint arcs that run off the screen edges: the implied space beyond the visor. */
+    public static void sideArcs(int w, int h, float t, float boot, int pri) {
+        float cx = w / 2f, cy = h / 2f, r = w * 0.5f + 10f;
+        float[] starts = {-42f, 16f, 138f, 196f};
+        for (float a0 : starts) {
+            Draw.arc(cx, cy, r, r + 1f, a0, 26f, Draw.col(pri, 0.16f * boot));
+            Draw.arc(cx, cy, r - 7f, r - 6f, a0 + 4f, 18f, Draw.col(pri, 0.10f * boot));
+            float drift = (t * 0.04f) % 4.4f;
+            for (int i = 0; i < 6; i++) {
+                float aa = (float) Math.toRadians(a0 + 3f + i * 4.4f + drift);
+                float c0 = (float) Math.cos(aa), s0 = (float) Math.sin(aa);
+                Draw.line(cx + c0 * (r - 5f), cy + s0 * (r - 5f), cx + c0 * (r + 4f), cy + s0 * (r + 4f), 1f,
+                        Draw.col(pri, 0.2f * boot));
+            }
+        }
+    }
 }

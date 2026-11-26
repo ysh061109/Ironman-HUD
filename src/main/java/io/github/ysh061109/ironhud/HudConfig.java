@@ -72,6 +72,9 @@ public final class HudConfig {
     public static final ModConfigSpec.BooleanValue SUIT_HOLSTER =
             B.comment("Third person: show the other guns from your hotbar holstered on the suit's back")
                     .define("suitHolster", true);
+    public static final ModConfigSpec.BooleanValue PARALLAX =
+            B.comment("Panels lag slightly behind head turns, as if floating inside the helmet")
+                    .define("parallax", true);
     public static final ModConfigSpec.BooleanValue SHOW_HELMET =
             B.comment("Helmet frame vignette").define("showHelmet", true);
 

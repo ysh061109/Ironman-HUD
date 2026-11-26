@@ -71,11 +71,21 @@ public final class HudRenderer {
         Overlays.hits(p, pt, w, h, t);
         if (HudConfig.SHOW_COMPASS.get()) compass(p, pt, w, t, boot, pri, acc);
 
+        // ---- HUD floats inside the helmet: zones lag the head turn at different depths
+        updateParallax(p, pt);
+        Draw.ox = parX;
+        Draw.oy = parY;
+        FilmStyle.sideArcs(w, h, t, boot, pri);
+
         // ---- left column: log, hull lamp, suit status, reactor
         if (HudConfig.SHOW_SYSLOG.get()) Overlays.sysLog(14f, 36f, boot, pri);
         FilmStyle.hullLamp(p, 14f, 62f, t, boot, pri, RED);
         if (HudConfig.SHOW_SUIT_STATUS.get()) suitStatus(96f, t, boot, pri, h, p);
+        Draw.ox = parX * 0.5f;
+        Draw.oy = parY * 0.5f;
         reactor(p, 50f, h - 48f, t, boot, pri);
+        Draw.ox = parX;
+        Draw.oy = parY;
 
         // ---- right column: stacked from the top, below any minimap, stopping above the radar
         float ry = 8f + HudConfig.topRightReserve();
@@ -98,9 +108,15 @@ public final class HudRenderer {
         if (ry + 46f <= rMax) FilmStyle.diagnosticCube(p, w, (int) ry, t, boot, AMBER);
         if (HudConfig.SHOW_RADAR.get()) radar(p, pt, w - 50f, h - 50f, t, boot, pri, acc);
 
+        Draw.ox = 0f;
+        Draw.oy = 0f;
         reticle(w / 2f, h / 2f, t, boot, pri);
         FilmStyle.reticleExtras(w / 2f, h / 2f, w, heading(p, pt), boot, pri);
+        Draw.ox = parX * 0.5f;
+        Draw.oy = parY * 0.5f;
         FilmStyle.vitals(p, 100f, h - 50f, t, boot, pri, RED);
+        Draw.ox = 0f;
+        Draw.oy = 0f;
         FilmStyle.bottomArc(w, h, t, boot, pri);
         FilmStyle.acquisitionTag(w, h, boot, HudState.multiLock ? HudState.locks.size() : HudState.contacts.size());
         FilmStyle.gaugeRow(p, w, h, t, boot, pri, RED);
@@ -128,6 +144,27 @@ public final class HudRenderer {
         Draw.rect(0, h - cover, w, h, Draw.col(pri, 0.30f * sh + 0.1f));
         Draw.rect(0, cover - 1f, w, cover + 1f, Draw.col(0xFFFFFF, 0.8f * sh));
         Draw.rect(0, h - cover - 1f, w, h - cover + 1f, Draw.col(0xFFFFFF, 0.8f * sh));
+    }
+
+    private static float parX, parY, lastYaw = Float.NaN, lastPitch;
+
+    /** Smoothed lag of the HUD behind head movement, clamped so panels never wander far from their zones. */
+    private static void updateParallax(LocalPlayer p, float pt) {
+        float yaw = p.getViewYRot(pt), pitch = p.getViewXRot(pt);
+        if (Float.isNaN(lastYaw)) {
+            lastYaw = yaw;
+            lastPitch = pitch;
+        }
+        float dy = Mth.wrapDegrees(yaw - lastYaw), dp = pitch - lastPitch;
+        lastYaw = yaw;
+        lastPitch = pitch;
+        float tx = Mth.clamp(-dy * 0.9f, -5f, 5f), ty = Mth.clamp(-dp * 0.9f, -4f, 4f);
+        parX += (tx - parX) * 0.18f;
+        parY += (ty - parY) * 0.18f;
+        if (!HudConfig.PARALLAX.get()) {
+            parX = 0f;
+            parY = 0f;
+        }
     }
 
     private static void updateFps() {

@@ -63,8 +63,11 @@ public final class Draw {
 
     // --------------------------------------------------------------- shapes
 
+    /** Layer offset in GUI units; set per HUD zone to float it against the head movement. */
+    public static float ox = 0f, oy = 0f;
+
     private static void v(float x, float y, int c) {
-        bb.addVertex(mat, x, y, 0f).setColor(c);
+        bb.addVertex(mat, x + ox, y + oy, 0f).setColor(c);
     }
 
     public static void rect(float x0, float y0, float x1, float y1, int argb) {
@@ -175,7 +178,7 @@ public final class Draw {
     // ----------------------------------------------------------------- text
 
     public static void text(String s, float x, float y, int argb, float scale) {
-        TEXTS.add(new Txt(s, x, y, argb, scale));
+        TEXTS.add(new Txt(s, x + ox, y + oy, argb, scale));
     }
 
     public static float width(String s, float scale) {
